@@ -26,20 +26,48 @@ const nav = document.getElementById('nav');
   mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMobileNav));
   document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeMobileNav(); });
 
-/* ---------- Storage helpers (shared app "database") ---------- */
-const MEMBERS_KEY = "members";
-const attKey = (id) => `attendance:${id}`;
+/* ---------- Backend API (Netlify Functions + Firebase) ---------- */
+const API = "/.netlify/functions";
+const SESSION_KEY = "lf_member";
 
-async function getMembers(){
-  try{ const r = await window.storage.get(MEMBERS_KEY, true); return r ? JSON.parse(r.value) : []; }
-  catch{ return []; }
+async function apiCall(path, options){
+  let res;
+  try{
+    res = await fetch(`${API}/${path}`, options);
+  }catch{
+    throw new Error("Can't reach the server. Check your connection and try again.");
+  }
+  let data = {};
+  try{ data = await res.json(); }catch{}
+  if(!res.ok) throw new Error(data.error || "Something went wrong. Please try again.");
+  return data;
 }
-async function saveMembers(list){ await window.storage.set(MEMBERS_KEY, JSON.stringify(list), true); }
-async function getAttendance(id){
-  try{ const r = await window.storage.get(attKey(id), true); return r ? JSON.parse(r.value) : []; }
-  catch{ return []; }
+
+const apiSignup = (name, email, password) => apiCall("signup", {
+  method: "POST", headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ name, email, password })
+});
+const apiLogin = (email, password) => apiCall("login", {
+  method: "POST", headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ email, password })
+});
+const apiCheckin = (memberId) => apiCall("checkin", {
+  method: "POST", headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ memberId })
+});
+const apiAttendance = (memberId) => apiCall(`attendance?memberId=${encodeURIComponent(memberId)}`, { method: "GET" });
+const apiMembers = () => apiCall("members", { method: "GET" });
+
+function saveSession(member){ localStorage.setItem(SESSION_KEY, JSON.stringify(member)); }
+function loadSession(){
+  try{ return JSON.parse(localStorage.getItem(SESSION_KEY)); }catch{ return null; }
 }
-async function saveAttendance(id, dates){ await window.storage.set(attKey(id), JSON.stringify(dates), true); }
+function clearSession(){ localStorage.removeItem(SESSION_KEY); }
+
+function updateAuthButtons(){
+  const label = currentMember ? `Hi, ${currentMember.name.split(" ")[0]}` : "Member Login";
+  document.querySelectorAll(".login-trigger-btn").forEach(btn => btn.textContent = label);
+}
 
 function todayStr(){ return new Date().toISOString().slice(0,10); }
 function computeStreak(dates){
@@ -53,8 +81,9 @@ function computeStreak(dates){
   return streak;
 }
 
-let currentMember = null;
+let currentMember = loadSession();
 let authMode = "login";
+updateAuthButtons();
 
 function openAuth(){
   document.getElementById("authOverlay").classList.add("active");
@@ -96,21 +125,20 @@ async function handleAuthSubmit(e){
   e.preventDefault();
   const email = document.getElementById("f_email").value.trim();
   const pass = document.getElementById("f_pass").value;
-  const members = await getMembers();
-  const existing = members.find(m => m.email.toLowerCase() === email.toLowerCase());
+  const submitBtn = e.target.querySelector("button[type=submit]");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "Please wait…";
 
-  if(authMode === "signup"){
-    const name = document.getElementById("f_name").value.trim();
-    if(existing) return renderAuthForm("An account with that email already exists.");
-    if(!name || !email || pass.length < 4) return renderAuthForm("Fill in your name, email, and a password (4+ characters).");
-    const member = { id: "m_"+Date.now()+"_"+Math.random().toString(36).slice(2,7), name, email, password: pass, joined: todayStr(), role: "member" };
-    await saveMembers([...members, member]);
+  try{
+    const member = authMode === "signup"
+      ? await apiSignup(document.getElementById("f_name").value.trim(), email, pass)
+      : await apiLogin(email, pass);
     currentMember = member;
+    saveSession(member);
+    updateAuthButtons();
     renderDashboard();
-  } else {
-    if(!existing || existing.password !== pass) return renderAuthForm("No match found. Check your details, or sign up.");
-    currentMember = existing;
-    renderDashboard();
+  }catch(err){
+    renderAuthForm(err.message);
   }
 }
 
@@ -118,7 +146,13 @@ async function renderDashboard(){
   const box = document.getElementById("authBox");
   box.className = "modal-box";
   box.innerHTML = `<p class="empty-note">Loading…</p>`;
-  const dates = await getAttendance(currentMember.id);
+  let dates;
+  try{
+    ({ dates } = await apiAttendance(currentMember.id));
+  }catch(err){
+    box.innerHTML = `<button class="modal-close" onclick="closeAuth()">&times;</button><p class="empty-note">${err.message}</p>`;
+    return;
+  }
   const checkedToday = dates.includes(todayStr());
   const streak = computeStreak(dates);
   const last7 = Array.from({length:7}).map((_,i)=>{
@@ -152,31 +186,38 @@ async function renderDashboard(){
 
 async function handleCheckin(dates, checkedToday){
   if(checkedToday) return;
-  const next = [...dates, todayStr()];
-  await saveAttendance(currentMember.id, next);
-  renderDashboard();
+  const ring = document.getElementById("ringBtn");
+  ring.style.pointerEvents = "none";
+  try{
+    await apiCheckin(currentMember.id);
+    renderDashboard();
+  }catch(err){
+    ring.style.pointerEvents = "";
+    alert(err.message);
+  }
 }
 
-function doLogout(){ currentMember = null; authMode = "login"; renderAuthForm(); }
+function doLogout(){ currentMember = null; clearSession(); updateAuthButtons(); authMode = "login"; renderAuthForm(); }
 
 async function renderAdmin(){
   const box = document.getElementById("authBox");
   box.className = "modal-box wide";
   box.innerHTML = `<p class="empty-note">Loading members…</p>`;
-  const members = await getMembers();
-  let rows = "";
-  for(const m of members){
-    const dates = await getAttendance(m.id);
-    const streak = computeStreak(dates);
-    rows += `
+  let members;
+  try{
+    ({ members } = await apiMembers());
+  }catch(err){
+    box.innerHTML = `<button class="modal-close" onclick="closeAuth()">&times;</button><p class="empty-note">${err.message}</p>`;
+    return;
+  }
+  const rows = members.map(m => `
       <div class="admin-row">
         <div><div class="m-name">${m.name}</div><div class="m-email">${m.email} · joined ${m.joined}</div></div>
         <div class="admin-stats">
-          <div><span class="n">${dates.length}</span><span class="l">visits</span></div>
-          <div><span class="n">${streak}</span><span class="l">streak</span></div>
+          <div><span class="n">${m.visits}</span><span class="l">visits</span></div>
+          <div><span class="n">${computeStreak(m.dates)}</span><span class="l">streak</span></div>
         </div>
-      </div>`;
-  }
+      </div>`).join("");
   box.innerHTML = `
     <button class="modal-close" onclick="closeAuth()">&times;</button>
     <div class="eyebrow modal-eyebrow">Admin</div>
