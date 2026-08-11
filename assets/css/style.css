@@ -144,6 +144,55 @@
   .svc-list li:last-child{border-bottom:1px solid var(--line);}
   .svc-list li b{color:var(--cream);font-weight:500;}
 
+  /* CART BUTTON */
+  .cart-btn{position:relative;background:none;border:none;color:var(--cream);cursor:pointer;display:flex;align-items:center;padding:4px;}
+  .cart-btn svg{width:21px;height:21px;}
+  .cart-badge{
+    position:absolute;top:-6px;right:-8px;
+    background:var(--gold);color:var(--black);
+    font-size:10px;font-weight:700;line-height:1;
+    min-width:16px;height:16px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;padding:2px;
+  }
+  .cart-badge-inline{position:static;margin-left:8px;}
+
+  /* PLANS */
+  .plans{padding:110px 0;background:var(--charcoal);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .plans-head{max-width:640px;margin-bottom:54px;}
+  .plans-head h2{font-size:clamp(30px,4vw,46px);margin-top:18px;color:var(--cream);}
+  .plans-head p{color:var(--muted);margin-top:16px;line-height:1.8;font-size:15px;}
+  .plan-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:1px;background:var(--line);}
+  .plan-card{background:var(--charcoal2);padding:36px;}
+  .plan-card h3{font-size:19px;color:var(--gold-light);margin-bottom:22px;letter-spacing:0.03em;}
+  .plan-item{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 0;border-top:1px solid var(--line);}
+  .plan-item:last-child{padding-bottom:0;}
+  .plan-item-info{display:flex;flex-direction:column;gap:2px;}
+  .plan-item-name{color:var(--cream);font-size:14.5px;}
+  .plan-item-price{color:var(--gold-light);font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:0.03em;}
+  .plan-add-btn{
+    flex-shrink:0;background:transparent;border:1px solid var(--gold);color:var(--gold-light);
+    padding:8px 16px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;
+    transition:background .2s, color .2s;
+  }
+  .plan-add-btn:hover{background:var(--gold);color:var(--black);}
+  .plan-add-btn.added{background:var(--gold);color:var(--black);border-color:var(--gold);}
+
+  /* CART MODAL */
+  .cart-row{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--line);}
+  .cart-row-info{display:flex;flex-direction:column;gap:2px;}
+  .cart-row-cat{color:var(--muted2);font-size:11px;text-transform:uppercase;letter-spacing:0.08em;}
+  .cart-row-name{color:var(--cream);font-size:14.5px;}
+  .cart-row-price{color:var(--gold-light);font-size:12.5px;font-family:'Oswald',sans-serif;}
+  .cart-qty{display:flex;align-items:center;gap:10px;}
+  .cart-qty button{
+    width:26px;height:26px;border-radius:50%;border:1px solid var(--line);background:none;color:var(--cream);cursor:pointer;font-size:14px;
+  }
+  .cart-qty button:hover{border-color:var(--gold);color:var(--gold);}
+  .cart-remove{background:none;border:none;color:var(--muted2);cursor:pointer;font-size:18px;line-height:1;}
+  .cart-remove:hover{color:#d9776b;}
+  .cart-total-row{display:flex;justify-content:space-between;align-items:center;padding:20px 0 6px;font-family:'Oswald',sans-serif;color:var(--cream);font-size:17px;}
+  .cart-total-row b{color:var(--gold-light);}
+
   /* GALLERY */
   .gallery{padding:110px 0;}
   .gallery-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:50px;flex-wrap:wrap;gap:20px;}
@@ -409,6 +458,7 @@
     .hero-content{padding-bottom:70px;}
     .ba-feature{grid-template-columns:1fr;padding:26px 22px 30px;gap:22px;}
     .connect-grid{grid-template-columns:repeat(2,1fr);gap:18px;}
+    .plan-grid{grid-template-columns:1fr;}
   }
 
   @media(max-width:600px){
@@ -419,6 +469,9 @@
     .g-grid{grid-template-columns:1fr;grid-auto-rows:260px;}
     .ba-images{grid-template-columns:1fr 1fr;gap:8px;}
     .modal-box{padding:30px 20px;max-height:92vh;}
+    .plan-card{padding:26px 20px;}
+    .plan-item{flex-wrap:wrap;}
+    .cart-row{flex-wrap:wrap;}
     .contact-card{padding:26px 20px;}
     .contact-btns{flex-direction:column;}
     .day-track{gap:5px;}

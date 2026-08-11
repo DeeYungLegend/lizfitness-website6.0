@@ -26,6 +26,170 @@ const nav = document.getElementById('nav');
   mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMobileNav));
   document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeMobileNav(); });
 
+/* ---------- Plans / pricing (placeholder catalog, no live payment gateway yet) ---------- */
+const PLANS = [
+  { category: "Gym Session Fee", items: [
+    { plan: "Daily", price: 3500 },
+    { plan: "Weekly", price: 9000 },
+    { plan: "Weekend", price: 12000 },
+    { plan: "Monthly", price: 20000 },
+    { plan: "Quarterly", price: 56000 },
+    { plan: "Annually", price: 200000 },
+  ]},
+  { category: "Fitness Subscription", items: [
+    { plan: "Online Training Monthly", price: 30000 },
+    { plan: "Personal Session Monthly", price: 30000 },
+  ]},
+  { category: "Private Session (Home Monthly)", items: [
+    { plan: "Mainland", price: 150000 },
+    { plan: "Island", price: 250000 },
+  ]},
+  { category: "Diet & Organic Supplement Drink", items: [
+    { plan: "Weight Loss Diet Monthly", price: 15000 },
+    { plan: "Weight Gain Diet Monthly", price: 20000 },
+    { plan: "Organic Weight Gain / Body Builder Protein Powder", price: 20000 },
+    { plan: "Weight Loss Drink (per 5ltrs)", price: 15000 },
+    { plan: "Detox Drink", price: 2000 },
+  ]},
+];
+
+function formatNaira(n){ return "₦" + Number(n).toLocaleString("en-NG"); }
+
+function renderPlans(){
+  const grid = document.getElementById("plansGrid");
+  grid.innerHTML = PLANS.map(cat => `
+    <div class="plan-card">
+      <h3>${cat.category}</h3>
+      ${cat.items.map(it => `
+        <div class="plan-item">
+          <div class="plan-item-info">
+            <span class="plan-item-name">${it.plan}</span>
+            <span class="plan-item-price">${formatNaira(it.price)}</span>
+          </div>
+          <button class="plan-add-btn" data-cat="${cat.category}" data-plan="${it.plan}" data-price="${it.price}">Add</button>
+        </div>
+      `).join("")}
+    </div>
+  `).join("");
+
+  grid.querySelectorAll(".plan-add-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      addToCart(btn.dataset.cat, btn.dataset.plan, Number(btn.dataset.price));
+      btn.textContent = "Added ✓";
+      btn.classList.add("added");
+      setTimeout(() => { btn.textContent = "Add"; btn.classList.remove("added"); }, 1200);
+    });
+  });
+}
+renderPlans();
+
+/* ---------- Cart ---------- */
+const CART_KEY = "lf_cart";
+let cart = [];
+try{ cart = JSON.parse(localStorage.getItem(CART_KEY)) || []; }catch{ cart = []; }
+
+function saveCart(){ localStorage.setItem(CART_KEY, JSON.stringify(cart)); updateCartBadge(); }
+
+function updateCartBadge(){
+  const count = cart.reduce((n, it) => n + it.qty, 0);
+  document.querySelectorAll("#cartBadge, #cartBadgeMobile").forEach(el => {
+    el.textContent = count;
+    el.style.display = count > 0 ? "flex" : "none";
+  });
+}
+updateCartBadge();
+
+function addToCart(category, plan, price){
+  const existing = cart.find(it => it.category === category && it.plan === plan);
+  if(existing) existing.qty += 1;
+  else cart.push({ category, plan, price, qty: 1 });
+  saveCart();
+}
+function changeQty(index, delta){
+  const item = cart[index];
+  if(!item) return;
+  item.qty += delta;
+  if(item.qty <= 0) cart.splice(index, 1);
+  saveCart();
+  renderCartModal();
+}
+function removeFromCart(index){
+  cart.splice(index, 1);
+  saveCart();
+  renderCartModal();
+}
+
+function openCart(){
+  document.getElementById("cartOverlay").classList.add("active");
+  renderCartModal();
+}
+function closeCart(){ document.getElementById("cartOverlay").classList.remove("active"); }
+document.getElementById("cartOverlay").addEventListener("click", (e) => {
+  if(e.target.id === "cartOverlay") closeCart();
+});
+
+function renderCartModal(){
+  const box = document.getElementById("cartBox");
+  const total = cart.reduce((sum, it) => sum + it.price * it.qty, 0);
+
+  box.innerHTML = `
+    <button class="modal-close" onclick="closeCart()">&times;</button>
+    <div class="eyebrow modal-eyebrow">Your Cart</div>
+    <h2>${cart.length ? "Review your plans" : "Your cart is empty"}</h2>
+    ${cart.length ? "" : `<p class="modal-sub">Browse Plans &amp; Pricing and add whatever fits.</p>`}
+    ${cart.map((it, i) => `
+      <div class="cart-row">
+        <div class="cart-row-info">
+          <span class="cart-row-cat">${it.category}</span>
+          <span class="cart-row-name">${it.plan}</span>
+          <span class="cart-row-price">${formatNaira(it.price)} each</span>
+        </div>
+        <div class="cart-qty">
+          <button onclick="changeQty(${i},-1)" aria-label="Decrease quantity">&minus;</button>
+          <span>${it.qty}</span>
+          <button onclick="changeQty(${i},1)" aria-label="Increase quantity">+</button>
+        </div>
+        <button class="cart-remove" onclick="removeFromCart(${i})" aria-label="Remove item">&times;</button>
+      </div>
+    `).join("")}
+    ${cart.length ? `
+      <div class="cart-total-row"><span>Total</span><b>${formatNaira(total)}</b></div>
+      <div id="checkoutMsg"></div>
+      <button class="btn btn-solid btn-block" onclick="handleCheckout()">Checkout</button>
+      <p class="modal-sub" style="margin-top:14px;">Placeholder checkout — this records your order, a team member will reach out to confirm and collect payment. Online payment is coming soon.</p>
+    ` : ""}
+  `;
+}
+
+async function handleCheckout(){
+  if(!currentMember){
+    closeCart();
+    authMode = "login";
+    openAuth();
+    renderAuthForm("Please log in or create an account first, then check out again.");
+    return;
+  }
+  const msg = document.getElementById("checkoutMsg");
+  msg.innerHTML = `<p class="empty-note">Placing order…</p>`;
+  try{
+    const order = await apiCall("order-create", {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({ memberId: currentMember.id, items: cart })
+    });
+    cart = [];
+    saveCart();
+    document.getElementById("cartBox").innerHTML = `
+      <button class="modal-close" onclick="closeCart()">&times;</button>
+      <div class="eyebrow modal-eyebrow">Order Placed</div>
+      <h2>Thanks, ${currentMember.name.split(" ")[0]}!</h2>
+      <p class="modal-sub">Your order for <b style="color:var(--gold-light)">${formatNaira(order.total)}</b> is in as <b>pending</b>. A team member will reach out on WhatsApp to confirm and collect payment.</p>
+      <button class="btn btn-outline btn-block" onclick="closeCart()">Done</button>
+    `;
+  }catch(err){
+    msg.innerHTML = `<div class="form-error">${err.message}</div>`;
+  }
+}
+
 /* ---------- Backend API (Netlify Functions + Firebase) ---------- */
 const API = "/.netlify/functions";
 const SESSION_KEY = "lf_member";

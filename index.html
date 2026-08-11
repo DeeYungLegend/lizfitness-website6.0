@@ -22,6 +22,7 @@
   <div class="navlinks">
     <a href="#about">About</a>
     <a href="#services">Services</a>
+    <a href="#plans">Plans</a>
     <a href="#gallery">Gallery</a>
     <a href="#connect">Connect</a>
     <a href="#results">Results</a>
@@ -32,6 +33,10 @@
       <a href="https://www.instagram.com/lizfitnessgym/" target="_blank" rel="noopener" aria-label="Instagram"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg></a>
       <a href="https://www.youtube.com/@lizfitnessgym" target="_blank" rel="noopener" aria-label="YouTube"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="5.5" width="19" height="13" rx="4"/><path d="M10.5 9.2l5 2.8-5 2.8z" fill="currentColor" stroke="none"/></svg></a>
     </div>
+    <button class="cart-btn" onclick="openCart()" aria-label="Open cart">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="21" r="1.4"/><circle cx="18" cy="21" r="1.4"/><path d="M2.5 3h2.2l2.4 12.2a2 2 0 0 0 2 1.6h8.1a2 2 0 0 0 2-1.6L21 7.5H6"/></svg>
+      <span class="cart-badge" id="cartBadge" style="display:none;">0</span>
+    </button>
     <button class="nav-cta" style="border:none;cursor:pointer;font-family:'Inter',sans-serif;" onclick="openContact()">Book a Session</button>
     <button class="nav-cta login-trigger-btn" style="background:transparent;color:var(--gold);border:1px solid var(--gold);" onclick="openAuth()">Member Login</button>
     <button class="burger" aria-label="Open menu" id="burgerBtn">☰</button>
@@ -46,11 +51,13 @@
   <div class="mobile-nav-links">
     <a href="#about">About</a>
     <a href="#services">Services</a>
+    <a href="#plans">Plans</a>
     <a href="#gallery">Gallery</a>
     <a href="#connect">Connect</a>
     <a href="#results">Results</a>
     <a href="#visit">Visit</a>
   </div>
+  <button class="btn btn-outline" style="justify-content:space-between;" onclick="closeMobileNav();openCart()">Cart <span class="cart-badge cart-badge-inline" id="cartBadgeMobile" style="display:none;">0</span></button>
   <button class="btn btn-solid" style="border:none;cursor:pointer;font-family:'Inter',sans-serif;" onclick="openContact()">Book a Session</button>
   <button class="btn btn-outline login-trigger-btn" onclick="openAuth()">Member Login</button>
   <div class="social-row">
@@ -119,6 +126,17 @@
         </ul>
       </div>
     </div>
+  </div>
+</section>
+
+<section class="plans" id="plans">
+  <div class="wrap">
+    <div class="plans-head">
+      <div class="eyebrow">Membership &amp; Programs</div>
+      <h2>Plans &amp; pricing.</h2>
+      <p>Pick what fits, add it to your cart, and check out — a team member will confirm and collect payment. Online card payment is coming soon.</p>
+    </div>
+    <div class="plan-grid" id="plansGrid"><p class="empty-note">Loading plans…</p></div>
   </div>
 </section>
 
@@ -297,6 +315,7 @@
     <div class="foot-links">
       <a href="#about">About</a>
       <a href="#services">Services</a>
+      <a href="#plans">Plans</a>
       <a href="#gallery">Gallery</a>
       <a href="#results">Results</a>
       <a href="https://wa.me/2348027546628" target="_blank" rel="noopener">WhatsApp</a>
@@ -315,6 +334,11 @@
 <!-- MEMBER MODAL -->
 <div class="modal-overlay" id="authOverlay">
   <div class="modal-box" id="authBox"></div>
+</div>
+
+<!-- CART MODAL -->
+<div class="modal-overlay" id="cartOverlay">
+  <div class="modal-box wide" id="cartBox"></div>
 </div>
 
 <!-- CONTACT CHOICE MODAL -->
