@@ -286,8 +286,12 @@ let authMode = "login";
 updateAuthButtons();
 
 function openAuth(){
+  if(currentMember){
+    location.href = currentMember.role === "admin" ? "admin.html" : "dashboard.html";
+    return;
+  }
   document.getElementById("authOverlay").classList.add("active");
-  currentMember ? renderDashboard() : renderAuthForm();
+  renderAuthForm();
 }
 function closeAuth(){ document.getElementById("authOverlay").classList.remove("active"); }
 
@@ -336,7 +340,7 @@ async function handleAuthSubmit(e){
     currentMember = member;
     saveSession(member);
     updateAuthButtons();
-    renderDashboard();
+    location.href = member.role === "admin" ? "admin.html" : "dashboard.html";
   }catch(err){
     renderAuthForm(err.message);
   }
@@ -346,14 +350,13 @@ let memberTab = "checkin";
 
 async function renderDashboard(){
   memberTab = "checkin";
-  const box = document.getElementById("authBox");
-  box.className = "modal-box wide";
+  const box = document.getElementById("dashPageBox");
+  box.className = "modal-box wide page-mode";
   box.innerHTML = `
-    <button class="modal-close" onclick="closeAuth()">&times;</button>
     <div class="dash-top">
       <div><div class="dash-hi">Welcome back</div><div class="dash-name">${currentMember.name.split(" ")[0]}</div></div>
       <div style="display:flex;gap:8px;">
-        ${currentMember.role === "admin" ? `<button class="icon-btn" title="Admin" onclick="renderAdmin()">&#9776;</button>` : ""}
+        ${currentMember.role === "admin" ? `<button class="icon-btn" title="Admin dashboard" onclick="location.href='admin.html'">&#9776;</button>` : ""}
         <button class="icon-btn" title="Log out" onclick="doLogout()">&#8594;</button>
       </div>
     </div>
@@ -497,7 +500,7 @@ async function renderMemberMessages(el){
   if(dot) dot.style.display = "none";
 }
 
-function doLogout(){ currentMember = null; clearSession(); updateAuthButtons(); authMode = "login"; renderAuthForm(); }
+function doLogout(){ currentMember = null; clearSession(); updateAuthButtons(); authMode = "login"; location.href = "index.html"; }
 
 let adminTab = "members";
 let adminActiveThread = null;
@@ -505,13 +508,16 @@ let adminActiveThread = null;
 async function renderAdmin(){
   adminTab = "members";
   adminActiveThread = null;
-  const box = document.getElementById("authBox");
-  box.className = "modal-box wide";
+  const box = document.getElementById("dashPageBox");
+  box.className = "modal-box wide page-mode";
   box.innerHTML = `
-    <button class="modal-close" onclick="closeAuth()">&times;</button>
-    <div class="eyebrow modal-eyebrow">Admin</div>
-    <h2>Dashboard</h2>
-    <p class="modal-sub"><button onclick="renderDashboard()" style="background:none;border:none;color:var(--gold-light);cursor:pointer;text-decoration:underline;font-size:12.5px;">&larr; Back to my dashboard</button></p>
+    <div class="dash-top">
+      <div><div class="dash-hi">Admin</div><div class="dash-name">${currentMember.name.split(" ")[0]}</div></div>
+      <div style="display:flex;gap:8px;">
+        <button class="icon-btn" title="My dashboard" onclick="location.href='dashboard.html'">&#8617;</button>
+        <button class="icon-btn" title="Log out" onclick="doLogout()">&#8594;</button>
+      </div>
+    </div>
     <div class="dash-tabs" id="adminTabs">
       <button class="dash-tab" data-tab="members">Members</button>
       <button class="dash-tab" data-tab="orders">Orders</button>
@@ -737,3 +743,15 @@ if(newsletterForm) newsletterForm.addEventListener("submit", async (e) => {
     btn.disabled = false;
   }
 });
+
+/* ---------- Dedicated dashboard/admin pages ---------- */
+const pageType = document.body.dataset.page;
+if(pageType === "dashboard"){
+  if(!currentMember) location.href = "index.html";
+  else renderDashboard();
+}
+if(pageType === "admin"){
+  if(!currentMember) location.href = "index.html";
+  else if(currentMember.role !== "admin") location.href = "dashboard.html";
+  else renderAdmin();
+}

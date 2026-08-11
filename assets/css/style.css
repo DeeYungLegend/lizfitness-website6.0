@@ -257,6 +257,9 @@
     padding:38px 34px;position:relative;
   }
   .modal-box.wide{max-width:640px;}
+  .modal-box.page-mode{position:static;max-height:none;overflow-y:visible;}
+
+  .dash-page-section{padding:170px 0 110px;min-height:60vh;display:flex;justify-content:center;}
   .modal-close{
     position:absolute;top:16px;right:18px;background:none;border:none;
     color:var(--muted2);font-size:22px;cursor:pointer;line-height:1;
