@@ -55,8 +55,8 @@ const PLANS = [
 
 function formatNaira(n){ return "₦" + Number(n).toLocaleString("en-NG"); }
 
-function renderPlans(){
-  const grid = document.getElementById("plansGrid");
+function renderPlans(gridId){
+  const grid = document.getElementById(gridId || "plansGrid");
   grid.innerHTML = PLANS.map(cat => `
     <div class="plan-card">
       <h3>${cat.category}</h3>
@@ -81,7 +81,7 @@ function renderPlans(){
     });
   });
 }
-renderPlans();
+renderPlans("plansGrid");
 
 /* ---------- Cart ---------- */
 const CART_KEY = "lf_cart";
@@ -341,25 +341,12 @@ async function handleAuthSubmit(e){
   }
 }
 
-async function renderDashboard(){
-  const box = document.getElementById("authBox");
-  box.className = "modal-box";
-  box.innerHTML = `<p class="empty-note">Loading…</p>`;
-  let dates;
-  try{
-    ({ dates } = await apiAttendance(currentMember.id));
-  }catch(err){
-    box.innerHTML = `<button class="modal-close" onclick="closeAuth()">&times;</button><p class="empty-note">${err.message}</p>`;
-    return;
-  }
-  const checkedToday = dates.includes(todayStr());
-  const streak = computeStreak(dates);
-  const last7 = Array.from({length:7}).map((_,i)=>{
-    const d = new Date(); d.setDate(d.getDate()-(6-i));
-    const key = d.toISOString().slice(0,10);
-    return { key, label: d.toLocaleDateString(undefined,{weekday:"narrow"}), on: dates.includes(key) };
-  });
+let memberTab = "checkin";
 
+async function renderDashboard(){
+  memberTab = "checkin";
+  const box = document.getElementById("authBox");
+  box.className = "modal-box wide";
   box.innerHTML = `
     <button class="modal-close" onclick="closeAuth()">&times;</button>
     <div class="dash-top">
@@ -369,6 +356,70 @@ async function renderDashboard(){
         <button class="icon-btn" title="Log out" onclick="doLogout()">&#8594;</button>
       </div>
     </div>
+    <div class="dash-tabs" id="memberTabs">
+      <button class="dash-tab" data-tab="checkin">Check-In</button>
+      <button class="dash-tab" data-tab="plans">Plans</button>
+      <button class="dash-tab" data-tab="orders">My Orders</button>
+      <button class="dash-tab" data-tab="notifications">Notifications<span class="tab-dot" id="notifDot" style="display:none;"></span></button>
+      <button class="dash-tab" data-tab="messages">Messages<span class="tab-dot" id="msgDot" style="display:none;"></span></button>
+    </div>
+    <div id="memberTabBody"><p class="empty-note">Loading…</p></div>
+  `;
+  box.querySelectorAll(".dash-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      memberTab = btn.dataset.tab;
+      updateMemberTabsUI();
+      renderMemberTabBody();
+    });
+  });
+  updateMemberTabsUI();
+  renderMemberTabBody();
+  refreshMemberBadges();
+}
+
+function updateMemberTabsUI(){
+  document.querySelectorAll("#memberTabs .dash-tab").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tab === memberTab);
+  });
+}
+
+async function refreshMemberBadges(){
+  try{
+    const { notifications } = await apiNotificationsList(currentMember.id);
+    const notifDot = document.getElementById("notifDot");
+    if(notifDot) notifDot.style.display = notifications.some(n => !n.read) ? "inline-block" : "none";
+  }catch{}
+  try{
+    const { messages } = await apiMessagesList(currentMember.id, "");
+    const msgDot = document.getElementById("msgDot");
+    if(msgDot) msgDot.style.display = messages.some(m => m.from === "admin" && !m.read) ? "inline-block" : "none";
+  }catch{}
+}
+
+async function renderMemberTabBody(){
+  const el = document.getElementById("memberTabBody");
+  el.innerHTML = `<p class="empty-note">Loading…</p>`;
+  try{
+    if(memberTab === "checkin") return renderMemberCheckin(el);
+    if(memberTab === "plans") return renderMemberPlans(el);
+    if(memberTab === "orders") return renderMemberOrders(el);
+    if(memberTab === "notifications") return renderMemberNotifications(el);
+    if(memberTab === "messages") return renderMemberMessages(el);
+  }catch(err){
+    el.innerHTML = `<p class="empty-note">${err.message}</p>`;
+  }
+}
+
+async function renderMemberCheckin(el){
+  const { dates } = await apiAttendance(currentMember.id);
+  const checkedToday = dates.includes(todayStr());
+  const streak = computeStreak(dates);
+  const last7 = Array.from({length:7}).map((_,i)=>{
+    const d = new Date(); d.setDate(d.getDate()-(6-i));
+    const key = d.toISOString().slice(0,10);
+    return { key, label: d.toLocaleDateString(undefined,{weekday:"narrow"}), on: dates.includes(key) };
+  });
+  el.innerHTML = `
     <div class="checkin-ring ${checkedToday ? "done" : ""}" id="ringBtn">
       <div class="big-ico">${checkedToday ? "&#10003;" : "&#128170;"}</div>
       <div class="lbl">${checkedToday ? "CHECKED IN" : "TICK IN"}</div>
@@ -378,7 +429,7 @@ async function renderDashboard(){
     <div class="day-track">
       ${last7.map(d => `<div class="day-cell"><span class="d">${d.label}</span><div class="box ${d.on ? "on" : ""}">${d.on ? "&#10003;" : ""}</div></div>`).join("")}
     </div>
-    <div class="dash-note">Total check-ins: <b style="color:var(--cream)">${dates.length}</b>. Payment plans and nutrition tracking are coming soon.</div>
+    <div class="dash-note">Total check-ins: <b style="color:var(--cream)">${dates.length}</b>.</div>
   `;
   document.getElementById("ringBtn").addEventListener("click", () => handleCheckin(dates, checkedToday));
 }
@@ -389,11 +440,60 @@ async function handleCheckin(dates, checkedToday){
   ring.style.pointerEvents = "none";
   try{
     await apiCheckin(currentMember.id);
-    renderDashboard();
+    renderMemberCheckin(document.getElementById("memberTabBody"));
   }catch(err){
     ring.style.pointerEvents = "";
     alert(err.message);
   }
+}
+
+async function renderMemberPlans(el){
+  el.innerHTML = `<p class="modal-sub">Add a plan, then check out from your cart.</p><div class="plan-grid" id="dashPlansGrid"></div>`;
+  renderPlans("dashPlansGrid");
+}
+
+async function renderMemberOrders(el){
+  const { orders } = await apiMyOrders(currentMember.id);
+  if(!orders.length){ el.innerHTML = `<p class="empty-note">No orders yet — check out the Plans tab.</p>`; return; }
+  el.innerHTML = orders.map(o => `
+    <div class="order-card">
+      <div class="order-top">
+        <div class="notif-time">${timeAgo(o.createdAt)}</div>
+        <span class="status-pill ${o.status}">${o.status}</span>
+      </div>
+      <div class="order-items">${o.items.map(it => `${it.qty}× ${it.plan} (${it.category}) — ${formatNaira(it.price * it.qty)}`).join("<br>")}</div>
+      <div class="order-items"><b style="color:var(--cream)">Total: ${formatNaira(o.total)}</b></div>
+    </div>
+  `).join("");
+}
+
+async function renderMemberNotifications(el){
+  const { notifications } = await apiNotificationsList(currentMember.id);
+  const unread = notifications.filter(n => !n.read).length;
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="color:var(--cream);font-size:15px;">Notifications</h3>
+      ${unread ? `<button class="btn btn-outline" style="padding:8px 14px;font-size:11px;" onclick="handleMarkAllNotifs('${currentMember.id}')">Mark all read</button>` : ""}
+    </div>
+    ${notifications.length ? notifications.map(n => `
+      <div class="notif-row ${n.read ? "" : "unread"}">
+        <span class="notif-dot ${n.read ? "read" : ""}"></span>
+        <div>
+          <div class="notif-title">${n.title}</div>
+          <div class="notif-body">${n.body || ""}</div>
+          <div class="notif-time">${timeAgo(n.createdAt)}</div>
+        </div>
+      </div>
+    `).join("") : `<p class="empty-note">Nothing yet.</p>`}
+  `;
+  const dot = document.getElementById("notifDot");
+  if(dot) dot.style.display = "none";
+}
+
+async function renderMemberMessages(el){
+  await renderThreadView(el, currentMember.id, "member");
+  const dot = document.getElementById("msgDot");
+  if(dot) dot.style.display = "none";
 }
 
 function doLogout(){ currentMember = null; clearSession(); updateAuthButtons(); authMode = "login"; renderAuthForm(); }
@@ -543,7 +643,7 @@ async function renderThreadView(el, memberId, viewerRole, onBackFnName){
   el.innerHTML = `<p class="empty-note">Loading…</p>`;
   const { messages } = await apiMessagesList(memberId, viewerRole);
   el.innerHTML = `
-    <button onclick="${onBackFnName}()" style="background:none;border:none;color:var(--gold-light);cursor:pointer;text-decoration:underline;font-size:12.5px;margin-bottom:14px;">&larr; Back</button>
+    ${onBackFnName ? `<button onclick="${onBackFnName}()" style="background:none;border:none;color:var(--gold-light);cursor:pointer;text-decoration:underline;font-size:12.5px;margin-bottom:14px;">&larr; Back</button>` : ""}
     <div class="msg-list" id="msgList">
       ${messages.length ? messages.map(m => `
         <div class="msg-bubble ${m.from === viewerRole ? "mine" : "theirs"}">
@@ -571,8 +671,8 @@ async function handleSendMessage(memberId, viewerRole){
   input.disabled = true;
   try{
     await apiMessagesSend(memberId, viewerRole, text);
-    if(viewerRole === "admin") renderThreadView(document.getElementById("adminTabBody"), memberId, "admin", () => { adminActiveThread = null; renderAdminTabBody(); });
-    else renderMemberThread();
+    if(viewerRole === "admin") renderThreadView(document.getElementById("adminTabBody"), memberId, "admin", "backFromAdminThread");
+    else renderMemberMessages(document.getElementById("memberTabBody"));
   }catch(err){
     alert(err.message);
     input.disabled = false;
