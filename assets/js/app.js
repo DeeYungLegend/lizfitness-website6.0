@@ -221,6 +221,41 @@ const apiCheckin = (memberId) => apiCall("checkin", {
 });
 const apiAttendance = (memberId) => apiCall(`attendance?memberId=${encodeURIComponent(memberId)}`, { method: "GET" });
 const apiMembers = () => apiCall("members", { method: "GET" });
+const apiMyOrders = (memberId) => apiCall(`my-orders?memberId=${encodeURIComponent(memberId)}`, { method: "GET" });
+const apiOrdersList = () => apiCall("orders-list", { method: "GET" });
+const apiOrderUpdateStatus = (orderId, status) => apiCall("order-update-status", {
+  method: "POST", headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ orderId, status })
+});
+const apiNotificationsList = (scope) => apiCall(`notifications-list?scope=${encodeURIComponent(scope)}`, { method: "GET" });
+const apiNotificationsMarkAll = (scope) => apiCall("notifications-mark-read", {
+  method: "POST", headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ scope, markAll: true })
+});
+const apiMessagesThreads = () => apiCall("messages-threads", { method: "GET" });
+const apiMessagesList = (memberId, viewerRole) => apiCall(`messages-list?memberId=${encodeURIComponent(memberId)}&viewerRole=${viewerRole}`, { method: "GET" });
+const apiMessagesSend = (memberId, from, text) => apiCall("messages-send", {
+  method: "POST", headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ memberId, from, text })
+});
+const apiAnnouncementCreate = (title, body) => apiCall("announcement-create", {
+  method: "POST", headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ title, body })
+});
+const apiAnnouncementsList = () => apiCall("announcements-list", { method: "GET" });
+const apiNewsletterSubscribe = (email) => apiCall("newsletter-subscribe", {
+  method: "POST", headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ email })
+});
+
+function timeAgo(iso){
+  if(!iso) return "";
+  const diff = (Date.now() - new Date(iso).getTime()) / 1000;
+  if(diff < 60) return "just now";
+  if(diff < 3600) return Math.floor(diff/60) + "m ago";
+  if(diff < 86400) return Math.floor(diff/3600) + "h ago";
+  return Math.floor(diff/86400) + "d ago";
+}
 
 function saveSession(member){ localStorage.setItem(SESSION_KEY, JSON.stringify(member)); }
 function loadSession(){
@@ -363,17 +398,62 @@ async function handleCheckin(dates, checkedToday){
 
 function doLogout(){ currentMember = null; clearSession(); updateAuthButtons(); authMode = "login"; renderAuthForm(); }
 
+let adminTab = "members";
+let adminActiveThread = null;
+
 async function renderAdmin(){
+  adminTab = "members";
+  adminActiveThread = null;
   const box = document.getElementById("authBox");
   box.className = "modal-box wide";
-  box.innerHTML = `<p class="empty-note">Loading members…</p>`;
-  let members;
+  box.innerHTML = `
+    <button class="modal-close" onclick="closeAuth()">&times;</button>
+    <div class="eyebrow modal-eyebrow">Admin</div>
+    <h2>Dashboard</h2>
+    <p class="modal-sub"><button onclick="renderDashboard()" style="background:none;border:none;color:var(--gold-light);cursor:pointer;text-decoration:underline;font-size:12.5px;">&larr; Back to my dashboard</button></p>
+    <div class="dash-tabs" id="adminTabs">
+      <button class="dash-tab" data-tab="members">Members</button>
+      <button class="dash-tab" data-tab="orders">Orders</button>
+      <button class="dash-tab" data-tab="messages">Messages</button>
+      <button class="dash-tab" data-tab="notifications">Notifications</button>
+      <button class="dash-tab" data-tab="announcements">Announce</button>
+    </div>
+    <div id="adminTabBody"><p class="empty-note">Loading…</p></div>
+  `;
+  box.querySelectorAll(".dash-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+      adminTab = btn.dataset.tab;
+      adminActiveThread = null;
+      updateAdminTabsUI();
+      renderAdminTabBody();
+    });
+  });
+  updateAdminTabsUI();
+  renderAdminTabBody();
+}
+
+function updateAdminTabsUI(){
+  document.querySelectorAll("#adminTabs .dash-tab").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.tab === adminTab);
+  });
+}
+
+async function renderAdminTabBody(){
+  const el = document.getElementById("adminTabBody");
+  el.innerHTML = `<p class="empty-note">Loading…</p>`;
   try{
-    ({ members } = await apiMembers());
+    if(adminTab === "members") return renderAdminMembers(el);
+    if(adminTab === "orders") return renderAdminOrders(el);
+    if(adminTab === "messages") return renderAdminMessages(el);
+    if(adminTab === "notifications") return renderAdminNotifications(el);
+    if(adminTab === "announcements") return renderAdminAnnouncements(el);
   }catch(err){
-    box.innerHTML = `<button class="modal-close" onclick="closeAuth()">&times;</button><p class="empty-note">${err.message}</p>`;
-    return;
+    el.innerHTML = `<p class="empty-note">${err.message}</p>`;
   }
+}
+
+async function renderAdminMembers(el){
+  const { members } = await apiMembers();
   const rows = members.map(m => `
       <div class="admin-row">
         <div><div class="m-name">${m.name}</div><div class="m-email">${m.email} · joined ${m.joined}</div></div>
@@ -382,13 +462,155 @@ async function renderAdmin(){
           <div><span class="n">${computeStreak(m.dates)}</span><span class="l">streak</span></div>
         </div>
       </div>`).join("");
-  box.innerHTML = `
-    <button class="modal-close" onclick="closeAuth()">&times;</button>
-    <div class="eyebrow modal-eyebrow">Admin</div>
-    <h2>Members (${members.length})</h2>
-    <p class="modal-sub"><button onclick="renderDashboard()" style="background:none;border:none;color:var(--gold-light);cursor:pointer;text-decoration:underline;font-size:12.5px;">&larr; Back to dashboard</button></p>
-    ${members.length ? rows : `<p class="empty-note">No members have signed up yet.</p>`}
+  el.innerHTML = `<h3 style="color:var(--cream);font-size:15px;margin-bottom:14px;">Members (${members.length})</h3>${members.length ? rows : `<p class="empty-note">No members have signed up yet.</p>`}`;
+}
+
+async function renderAdminOrders(el){
+  const { orders } = await apiOrdersList();
+  if(!orders.length){ el.innerHTML = `<p class="empty-note">No orders yet.</p>`; return; }
+  el.innerHTML = orders.map(o => `
+    <div class="order-card">
+      <div class="order-top">
+        <div>
+          <div class="m-name">${o.memberName}</div>
+          <div class="m-email">${o.memberEmail} · ${timeAgo(o.createdAt)}</div>
+        </div>
+        <span class="status-pill ${o.status}">${o.status}</span>
+      </div>
+      <div class="order-items">${o.items.map(it => `${it.qty}× ${it.plan} (${it.category}) — ${formatNaira(it.price * it.qty)}`).join("<br>")}</div>
+      <div class="order-items"><b style="color:var(--cream)">Total: ${formatNaira(o.total)}</b></div>
+      <div class="order-actions">
+        <button onclick="handleOrderStatus('${o.id}','confirmed')" ${o.status==="confirmed"?"disabled":""}>Mark Confirmed</button>
+        <button onclick="handleOrderStatus('${o.id}','pending')" ${o.status==="pending"?"disabled":""}>Mark Pending</button>
+        <button onclick="handleOrderStatus('${o.id}','cancelled')" ${o.status==="cancelled"?"disabled":""}>Cancel</button>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function handleOrderStatus(orderId, status){
+  try{ await apiOrderUpdateStatus(orderId, status); renderAdminTabBody(); }
+  catch(err){ alert(err.message); }
+}
+
+async function renderAdminNotifications(el){
+  const { notifications } = await apiNotificationsList("admin");
+  const unread = notifications.filter(n => !n.read).length;
+  el.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <h3 style="color:var(--cream);font-size:15px;">Notifications ${unread ? `(${unread} unread)` : ""}</h3>
+      ${unread ? `<button class="btn btn-outline" style="padding:8px 14px;font-size:11px;" onclick="handleMarkAllNotifs('admin')">Mark all read</button>` : ""}
+    </div>
+    ${notifications.length ? notifications.map(n => `
+      <div class="notif-row ${n.read ? "" : "unread"}">
+        <span class="notif-dot ${n.read ? "read" : ""}"></span>
+        <div>
+          <div class="notif-title">${n.title}</div>
+          <div class="notif-body">${n.body || ""}</div>
+          <div class="notif-time">${timeAgo(n.createdAt)}</div>
+        </div>
+      </div>
+    `).join("") : `<p class="empty-note">No notifications yet.</p>`}
   `;
+}
+
+async function handleMarkAllNotifs(scope){
+  try{ await apiNotificationsMarkAll(scope); renderAdminTabBody(); }
+  catch(err){ alert(err.message); }
+}
+
+function backFromAdminThread(){ adminActiveThread = null; renderAdminTabBody(); }
+
+async function renderAdminMessages(el){
+  if(adminActiveThread){
+    return renderThreadView(el, adminActiveThread, "admin", "backFromAdminThread");
+  }
+  const { threads } = await apiMessagesThreads();
+  if(!threads.length){ el.innerHTML = `<p class="empty-note">No messages yet.</p>`; return; }
+  el.innerHTML = threads.map(t => `
+    <div class="thread-row" onclick="openAdminThread('${t.memberId}')">
+      <div>
+        <div class="m-name">${t.memberName} ${t.unread ? `<span class="tab-dot"></span>` : ""}</div>
+        <div class="thread-preview">${t.lastFrom === "admin" ? "You: " : ""}${t.lastText}</div>
+      </div>
+      <div class="notif-time">${timeAgo(t.lastAt)}</div>
+    </div>
+  `).join("");
+}
+function openAdminThread(memberId){ adminActiveThread = memberId; renderAdminTabBody(); }
+
+async function renderThreadView(el, memberId, viewerRole, onBackFnName){
+  el.innerHTML = `<p class="empty-note">Loading…</p>`;
+  const { messages } = await apiMessagesList(memberId, viewerRole);
+  el.innerHTML = `
+    <button onclick="${onBackFnName}()" style="background:none;border:none;color:var(--gold-light);cursor:pointer;text-decoration:underline;font-size:12.5px;margin-bottom:14px;">&larr; Back</button>
+    <div class="msg-list" id="msgList">
+      ${messages.length ? messages.map(m => `
+        <div class="msg-bubble ${m.from === viewerRole ? "mine" : "theirs"}">
+          ${m.text}
+          <span class="msg-time">${timeAgo(m.createdAt)}</span>
+        </div>
+      `).join("") : `<p class="empty-note">No messages yet — say hello.</p>`}
+    </div>
+    <div class="msg-input-row">
+      <input type="text" id="msgInput" placeholder="Type a message…" maxlength="2000">
+      <button class="btn btn-solid" style="border:none;cursor:pointer;" onclick="handleSendMessage('${memberId}','${viewerRole}')">Send</button>
+    </div>
+  `;
+  const list = document.getElementById("msgList");
+  list.scrollTop = list.scrollHeight;
+  document.getElementById("msgInput").addEventListener("keydown", (e) => {
+    if(e.key === "Enter") handleSendMessage(memberId, viewerRole);
+  });
+}
+
+async function handleSendMessage(memberId, viewerRole){
+  const input = document.getElementById("msgInput");
+  const text = input.value.trim();
+  if(!text) return;
+  input.disabled = true;
+  try{
+    await apiMessagesSend(memberId, viewerRole, text);
+    if(viewerRole === "admin") renderThreadView(document.getElementById("adminTabBody"), memberId, "admin", () => { adminActiveThread = null; renderAdminTabBody(); });
+    else renderMemberThread();
+  }catch(err){
+    alert(err.message);
+    input.disabled = false;
+  }
+}
+
+async function renderAdminAnnouncements(el){
+  const { announcements } = await apiAnnouncementsList();
+  el.innerHTML = `
+    <form id="annForm" style="margin-bottom:24px;">
+      <div class="field-group"><label>Title</label><input type="text" id="ann_title" required placeholder="e.g. New HIIT class this Saturday"></div>
+      <div class="field-group"><label>Details</label><input type="text" id="ann_body" required placeholder="Short description members will see"></div>
+      <div id="annMsg"></div>
+      <button type="submit" class="btn btn-solid btn-block">Publish &amp; Notify Members</button>
+    </form>
+    <h3 style="color:var(--cream);font-size:15px;margin-bottom:8px;">Past announcements</h3>
+    ${announcements.length ? announcements.map(a => `
+      <div class="announcement-card">
+        <div class="announcement-title">${a.title}</div>
+        <div class="announcement-body">${a.body}</div>
+        <div class="announcement-time">${timeAgo(a.createdAt)}</div>
+      </div>
+    `).join("") : `<p class="empty-note">Nothing published yet.</p>`}
+  `;
+  document.getElementById("annForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = document.getElementById("ann_title").value.trim();
+    const body = document.getElementById("ann_body").value.trim();
+    const msg = document.getElementById("annMsg");
+    msg.innerHTML = `<p class="empty-note">Publishing…</p>`;
+    try{
+      const res = await apiAnnouncementCreate(title, body);
+      msg.innerHTML = `<p class="empty-note">Published — ${res.notified} member(s) notified${res.emailed ? `, ${res.emailed} emailed` : ""}.</p>`;
+      renderAdminAnnouncements(el);
+    }catch(err){
+      msg.innerHTML = `<div class="form-error">${err.message}</div>`;
+    }
+  });
 }
 
 document.getElementById("authOverlay").addEventListener("click", (e) => {

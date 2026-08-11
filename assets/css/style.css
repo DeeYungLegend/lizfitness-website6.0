@@ -302,6 +302,66 @@
   .day-cell .box.on{background:var(--gold);color:var(--black);}
   .dash-note{background:rgba(202,160,66,0.06);border:1px solid var(--line);padding:14px 16px;font-size:12.5px;color:var(--muted);line-height:1.6;text-align:center;}
 
+  /* ADMIN / MEMBER DASHBOARD TABS */
+  .dash-tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:22px;border-bottom:1px solid var(--line);padding-bottom:2px;}
+  .dash-tab{
+    background:none;border:none;color:var(--muted2);cursor:pointer;
+    font-family:'Oswald',sans-serif;font-size:12px;letter-spacing:0.06em;text-transform:uppercase;
+    padding:9px 12px;border-bottom:2px solid transparent;position:relative;
+  }
+  .dash-tab:hover{color:var(--cream);}
+  .dash-tab.active{color:var(--gold-light);border-bottom-color:var(--gold);}
+  .dash-tab .tab-dot{
+    display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--crimson);margin-left:6px;
+  }
+
+  .status-pill{
+    display:inline-block;padding:4px 10px;font-size:10px;letter-spacing:0.06em;text-transform:uppercase;
+    border:1px solid var(--line);color:var(--muted2);
+  }
+  .status-pill.pending{border-color:var(--gold);color:var(--gold-light);}
+  .status-pill.confirmed{border-color:#5fa876;color:#8fd6a3;}
+  .status-pill.cancelled{border-color:var(--crimson);color:#d9776b;}
+
+  .order-card{border-bottom:1px solid var(--line);padding:16px 0;}
+  .order-card:first-child{border-top:1px solid var(--line);}
+  .order-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;}
+  .order-items{font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:10px;}
+  .order-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .order-actions button{
+    background:none;border:1px solid var(--line);color:var(--muted);
+    font-size:10.5px;letter-spacing:0.05em;text-transform:uppercase;padding:6px 11px;cursor:pointer;
+  }
+  .order-actions button:hover{border-color:var(--gold);color:var(--gold-light);}
+
+  .notif-row{display:flex;gap:12px;align-items:flex-start;padding:14px 0;border-bottom:1px solid var(--line);}
+  .notif-row.unread{background:rgba(202,160,66,0.05);}
+  .notif-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);margin-top:6px;flex-shrink:0;}
+  .notif-dot.read{background:transparent;}
+  .notif-title{color:var(--cream);font-size:14px;}
+  .notif-body{color:var(--muted2);font-size:12.5px;margin-top:3px;}
+  .notif-time{color:var(--muted2);font-size:10.5px;margin-top:4px;}
+
+  .thread-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid var(--line);cursor:pointer;}
+  .thread-row:hover{color:var(--gold-light);}
+  .thread-preview{color:var(--muted2);font-size:12.5px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+
+  .msg-list{display:flex;flex-direction:column;gap:10px;max-height:340px;overflow-y:auto;padding:6px 2px;margin-bottom:14px;}
+  .msg-bubble{max-width:78%;padding:10px 14px;font-size:13.5px;line-height:1.5;border:1px solid var(--line);}
+  .msg-bubble.mine{align-self:flex-end;background:var(--gold);color:var(--black);border-color:var(--gold);}
+  .msg-bubble.theirs{align-self:flex-start;background:var(--black);color:var(--cream);}
+  .msg-time{display:block;font-size:9.5px;opacity:0.65;margin-top:4px;}
+  .msg-input-row{display:flex;gap:8px;}
+  .msg-input-row input{flex:1;background:var(--black);border:1px solid var(--line);color:var(--cream);padding:11px 13px;font-size:13.5px;font-family:'Inter',sans-serif;}
+  .msg-input-row input:focus{outline:none;border-color:var(--gold);}
+  .msg-input-row button{flex-shrink:0;}
+
+  .announcement-card{border-bottom:1px solid var(--line);padding:16px 0;}
+  .announcement-card:first-child{border-top:1px solid var(--line);}
+  .announcement-title{color:var(--cream);font-size:14.5px;margin-bottom:4px;}
+  .announcement-body{color:var(--muted);font-size:13px;line-height:1.6;}
+  .announcement-time{color:var(--muted2);font-size:11px;margin-top:6px;}
+
   .admin-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--line);}
   .admin-row:first-of-type{border-top:1px solid var(--line);}
   .admin-row .m-name{color:var(--cream);font-size:14px;}
