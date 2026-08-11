@@ -716,3 +716,22 @@ async function renderAdminAnnouncements(el){
 document.getElementById("authOverlay").addEventListener("click", (e) => {
   if(e.target.id === "authOverlay") closeAuth();
 });
+
+/* ---------- Newsletter signup ---------- */
+document.getElementById("newsletterForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const emailInput = document.getElementById("newsletterEmail");
+  const msg = document.getElementById("newsletterMsg");
+  const btn = e.target.querySelector("button[type=submit]");
+  btn.disabled = true;
+  msg.textContent = "";
+  try{
+    await apiNewsletterSubscribe(emailInput.value.trim());
+    msg.textContent = "You're subscribed — thanks for joining!";
+    emailInput.value = "";
+  }catch(err){
+    msg.textContent = err.message;
+  }finally{
+    btn.disabled = false;
+  }
+});
