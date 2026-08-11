@@ -121,11 +121,14 @@ function removeFromCart(index){
 }
 
 function openCart(){
-  document.getElementById("cartOverlay").classList.add("active");
+  const overlay = document.getElementById("cartOverlay");
+  if(!overlay) return;
+  overlay.classList.add("active");
   renderCartModal();
 }
-function closeCart(){ document.getElementById("cartOverlay").classList.remove("active"); }
-document.getElementById("cartOverlay").addEventListener("click", (e) => {
+function closeCart(){ const overlay = document.getElementById("cartOverlay"); if(overlay) overlay.classList.remove("active"); }
+const cartOverlayEl = document.getElementById("cartOverlay");
+if(cartOverlayEl) cartOverlayEl.addEventListener("click", (e) => {
   if(e.target.id === "cartOverlay") closeCart();
 });
 
@@ -164,10 +167,7 @@ function renderCartModal(){
 
 async function handleCheckout(){
   if(!currentMember){
-    closeCart();
-    authMode = "login";
-    openAuth();
-    renderAuthForm("Please log in or create an account first, then check out again.");
+    location.href = "login.html?next=" + encodeURIComponent(location.pathname);
     return;
   }
   const msg = document.getElementById("checkoutMsg");
@@ -211,6 +211,10 @@ async function apiCall(path, options){
 const apiSignup = (name, email, password) => apiCall("signup", {
   method: "POST", headers: {"Content-Type":"application/json"},
   body: JSON.stringify({ name, email, password })
+});
+const apiAdminSignup = (name, email, password, adminCode) => apiCall("admin-signup", {
+  method: "POST", headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ name, email, password, adminCode })
 });
 const apiLogin = (email, password) => apiCall("login", {
   method: "POST", headers: {"Content-Type":"application/json"},
@@ -286,40 +290,54 @@ let authMode = "login";
 updateAuthButtons();
 
 function openAuth(){
+  const params = new URLSearchParams(location.search);
+  const next = params.get("next");
   if(currentMember){
-    location.href = currentMember.role === "admin" ? "admin.html" : "dashboard.html";
+    location.href = next || (currentMember.role === "admin" ? "admin.html" : "dashboard.html");
     return;
   }
-  document.getElementById("authOverlay").classList.add("active");
-  renderAuthForm();
+  location.href = "login.html" + (location.pathname.endsWith("login.html") ? "" : "?next=" + encodeURIComponent(location.pathname));
 }
-function closeAuth(){ document.getElementById("authOverlay").classList.remove("active"); }
 
-function openContact(){ document.getElementById("contactOverlay").classList.add("active"); }
-function closeContact(){ document.getElementById("contactOverlay").classList.remove("active"); }
-document.getElementById("contactOverlay").addEventListener("click", (e) => {
+function openContact(){ const o = document.getElementById("contactOverlay"); if(o) o.classList.add("active"); }
+function closeContact(){ const o = document.getElementById("contactOverlay"); if(o) o.classList.remove("active"); }
+const contactOverlayEl = document.getElementById("contactOverlay");
+if(contactOverlayEl) contactOverlayEl.addEventListener("click", (e) => {
   if(e.target.id === "contactOverlay") closeContact();
 });
 
+function toggleAdminCode(){
+  const field = document.getElementById("adminCodeField");
+  const isHidden = field.style.display === "none";
+  field.style.display = isHidden ? "block" : "none";
+  document.getElementById("adminCodeToggleBtn").textContent = isHidden ? "Not staff? Hide this" : "Staff? Enter your admin invite code";
+}
+
 function renderAuthForm(err){
   authMode = authMode || "login";
-  const box = document.getElementById("authBox");
-  box.className = "modal-box";
+  const box = document.getElementById("authPageBox");
+  if(!box) return;
   box.innerHTML = `
-    <button class="modal-close" onclick="closeAuth()">&times;</button>
     <div class="eyebrow modal-eyebrow">Member Access</div>
     <h2>${authMode === "login" ? "Welcome back" : "Join the floor"}</h2>
-    <p class="modal-sub">${authMode === "login" ? "Log in to check in for today." : "Create your member account to start checking in."}</p>
+    <p class="modal-sub">${authMode === "login" ? "Log in to check in, shop, and message the gym." : "Create your account to start checking in."}</p>
     <form id="authForm">
       ${authMode === "signup" ? `<div class="field-group"><label>Full Name</label><input type="text" id="f_name" required></div>` : ""}
       <div class="field-group"><label>Email</label><input type="email" id="f_email" required></div>
       <div class="field-group"><label>Password</label><input type="password" id="f_pass" required></div>
+      ${authMode === "signup" ? `
+        <div class="admin-code-row"><button type="button" class="admin-code-link" onclick="toggleAdminCode()" id="adminCodeToggleBtn">Staff? Enter your admin invite code</button></div>
+        <div class="field-group" id="adminCodeField" style="display:none;">
+          <label>Admin Invite Code</label>
+          <input type="text" id="f_admincode" autocomplete="off">
+        </div>
+      ` : ""}
       ${err ? `<div class="form-error">${err}</div>` : ""}
       <button type="submit" class="btn btn-solid btn-block">${authMode === "login" ? "Log In" : "Create Account"}</button>
     </form>
     <div class="auth-switch">
       ${authMode === "login" ? `New here? <button onclick="authMode='signup';renderAuthForm()">Create an account</button>`
-                              : `Already a member? <button onclick="authMode='login';renderAuthForm()">Log in</button>`}
+                              : `Already have an account? <button onclick="authMode='login';renderAuthForm()">Log in</button>`}
     </div>
   `;
   document.getElementById("authForm").addEventListener("submit", handleAuthSubmit);
@@ -334,13 +352,21 @@ async function handleAuthSubmit(e){
   submitBtn.textContent = "Please wait…";
 
   try{
-    const member = authMode === "signup"
-      ? await apiSignup(document.getElementById("f_name").value.trim(), email, pass)
-      : await apiLogin(email, pass);
+    let member;
+    if(authMode === "signup"){
+      const name = document.getElementById("f_name").value.trim();
+      const adminCodeField = document.getElementById("f_admincode");
+      const adminCode = adminCodeField ? adminCodeField.value.trim() : "";
+      member = adminCode ? await apiAdminSignup(name, email, pass, adminCode) : await apiSignup(name, email, pass);
+    } else {
+      member = await apiLogin(email, pass);
+    }
     currentMember = member;
     saveSession(member);
     updateAuthButtons();
-    location.href = member.role === "admin" ? "admin.html" : "dashboard.html";
+    const params = new URLSearchParams(location.search);
+    const next = params.get("next");
+    location.href = next || (member.role === "admin" ? "admin.html" : "dashboard.html");
   }catch(err){
     renderAuthForm(err.message);
   }
@@ -351,15 +377,10 @@ let memberTab = "checkin";
 async function renderDashboard(){
   memberTab = "checkin";
   const box = document.getElementById("dashPageBox");
-  box.className = "modal-box wide page-mode";
+  box.className = "dash-shell";
   box.innerHTML = `
-    <div class="dash-top">
-      <div><div class="dash-hi">Welcome back</div><div class="dash-name">${currentMember.name.split(" ")[0]}</div></div>
-      <div style="display:flex;gap:8px;">
-        ${currentMember.role === "admin" ? `<button class="icon-btn" title="Admin dashboard" onclick="location.href='admin.html'">&#9776;</button>` : ""}
-        <button class="icon-btn" title="Log out" onclick="doLogout()">&#8594;</button>
-      </div>
-    </div>
+    <div class="dash-hi">Welcome back</div>
+    <div class="dash-name dash-name-lg">${currentMember.name.split(" ")[0]}</div>
     <div class="dash-tabs" id="memberTabs">
       <button class="dash-tab" data-tab="checkin">Check-In</button>
       <button class="dash-tab" data-tab="plans">Plans</button>
@@ -417,7 +438,6 @@ async function renderMemberTabBody(){
 async function renderMemberCheckin(el){
   const { dates } = await apiAttendance(currentMember.id);
   const checkedToday = dates.includes(todayStr());
-  const streak = computeStreak(dates);
   const last7 = Array.from({length:7}).map((_,i)=>{
     const d = new Date(); d.setDate(d.getDate()-(6-i));
     const key = d.toISOString().slice(0,10);
@@ -429,7 +449,6 @@ async function renderMemberCheckin(el){
       <div class="lbl">${checkedToday ? "CHECKED IN" : "TICK IN"}</div>
       ${checkedToday ? "" : `<div class="sub">tap when you arrive</div>`}
     </div>
-    <div class="streak-line">&#128293; <span class="n">${streak}</span> day streak</div>
     <div class="day-track">
       ${last7.map(d => `<div class="day-cell"><span class="d">${d.label}</span><div class="box ${d.on ? "on" : ""}">${d.on ? "&#10003;" : ""}</div></div>`).join("")}
     </div>
@@ -509,15 +528,10 @@ async function renderAdmin(){
   adminTab = "members";
   adminActiveThread = null;
   const box = document.getElementById("dashPageBox");
-  box.className = "modal-box wide page-mode";
+  box.className = "dash-shell";
   box.innerHTML = `
-    <div class="dash-top">
-      <div><div class="dash-hi">Admin</div><div class="dash-name">${currentMember.name.split(" ")[0]}</div></div>
-      <div style="display:flex;gap:8px;">
-        <button class="icon-btn" title="My dashboard" onclick="location.href='dashboard.html'">&#8617;</button>
-        <button class="icon-btn" title="Log out" onclick="doLogout()">&#8594;</button>
-      </div>
-    </div>
+    <div class="dash-hi">Admin Dashboard</div>
+    <div class="dash-name dash-name-lg">${currentMember.name.split(" ")[0]}</div>
     <div class="dash-tabs" id="adminTabs">
       <button class="dash-tab" data-tab="members">Members</button>
       <button class="dash-tab" data-tab="orders">Orders</button>
@@ -720,10 +734,6 @@ async function renderAdminAnnouncements(el){
   });
 }
 
-document.getElementById("authOverlay").addEventListener("click", (e) => {
-  if(e.target.id === "authOverlay") closeAuth();
-});
-
 /* ---------- Newsletter signup (not every page has this form) ---------- */
 const newsletterForm = document.getElementById("newsletterForm");
 if(newsletterForm) newsletterForm.addEventListener("submit", async (e) => {
@@ -744,8 +754,15 @@ if(newsletterForm) newsletterForm.addEventListener("submit", async (e) => {
   }
 });
 
-/* ---------- Dedicated dashboard/admin pages ---------- */
+/* ---------- Dedicated dashboard/admin/login pages ---------- */
 const pageType = document.body.dataset.page;
+
+const navUserNameEl = document.getElementById("navUserName");
+if(navUserNameEl && currentMember) navUserNameEl.textContent = currentMember.name.split(" ")[0];
+if(currentMember && currentMember.role === "admin"){
+  document.querySelectorAll(".admin-only-link").forEach(el => { el.style.display = "flex"; });
+}
+
 if(pageType === "dashboard"){
   if(!currentMember) location.href = "index.html";
   else renderDashboard();
@@ -754,4 +771,12 @@ if(pageType === "admin"){
   if(!currentMember) location.href = "index.html";
   else if(currentMember.role !== "admin") location.href = "dashboard.html";
   else renderAdmin();
+}
+if(pageType === "login"){
+  if(currentMember){
+    const params = new URLSearchParams(location.search);
+    location.href = params.get("next") || (currentMember.role === "admin" ? "admin.html" : "dashboard.html");
+  } else {
+    renderAuthForm();
+  }
 }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shop — Lizfitness Gym</title>
+<title>Member Login — Lizfitness Gym</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="icon" href="assets/img/favicon.ico" sizes="any">
@@ -12,7 +12,7 @@
 <link rel="apple-touch-icon" sizes="180x180" href="assets/img/apple-touch-icon.png">
 <link rel="stylesheet" href="assets/css/style.css">
 </head>
-<body>
+<body data-page="login">
 
 <nav id="nav" class="app-nav">
   <div class="brand">
@@ -24,7 +24,7 @@
   <div class="navlinks">
     <a href="index.html#about">About</a>
     <a href="index.html#services">Services</a>
-    <a href="shop.html" style="color:var(--gold-light);">Shop</a>
+    <a href="shop.html">Shop</a>
     <a href="index.html#gallery">Gallery</a>
     <a href="index.html#connect">Connect</a>
     <a href="index.html#results">Results</a>
@@ -53,7 +53,7 @@
   <div class="mobile-nav-links">
     <a href="index.html#about">About</a>
     <a href="index.html#services">Services</a>
-    <a href="shop.html" style="color:var(--gold-light);">Shop</a>
+    <a href="shop.html">Shop</a>
     <a href="index.html#gallery">Gallery</a>
     <a href="index.html#connect">Connect</a>
     <a href="index.html#results">Results</a>
@@ -68,14 +68,9 @@
   </div>
 </div>
 
-<section class="plans shop-page-head">
-  <div class="wrap">
-    <div class="plans-head">
-      <div class="eyebrow">Membership, Subscriptions &amp; Products</div>
-      <h2>Shop.</h2>
-      <p>Pick what fits, add it to your cart, and check out — a team member will confirm and collect payment. Online card payment is coming soon.</p>
-    </div>
-    <div class="plan-grid" id="plansGrid"><p class="empty-note">Loading plans…</p></div>
+<section class="auth-page-section">
+  <div class="wrap" style="display:flex;justify-content:center;">
+    <div class="auth-page-box" id="authPageBox"><p class="empty-note">Loading…</p></div>
   </div>
 </section>
 
