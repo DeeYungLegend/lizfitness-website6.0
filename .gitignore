@@ -1,0 +1,6 @@
+node_modules/
+assets/raw/
+__pycache__/
+*.pyc
+.netlify/
+.claude/
