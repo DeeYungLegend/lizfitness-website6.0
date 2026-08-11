@@ -421,6 +421,8 @@
   .hours-row span:first-child{color:var(--cream);font-family:'Oswald',sans-serif;letter-spacing:0.03em;font-size:13px;text-transform:uppercase;}
   .hours-row span:last-child{color:var(--muted2);letter-spacing:0.04em;}
   .hours-row.open span:last-child{color:var(--gold-light);font-weight:500;}
+  .hours-row-multi{align-items:flex-start;}
+  .hours-sessions{display:flex;flex-direction:column;gap:4px;text-align:right;}
   .note{margin-top:22px;font-size:13px;color:var(--muted2);line-height:1.7;}
 
   .contact-card{background:var(--charcoal);border:1px solid var(--line);padding:40px;}
