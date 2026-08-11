@@ -1,5 +1,5 @@
 const nav = document.getElementById('nav');
-  window.addEventListener('scroll', () => {
+  if(nav) window.addEventListener('scroll', () => {
     if (window.scrollY > 40) nav.classList.add('scrolled');
     else nav.classList.remove('scrolled');
   });
@@ -20,10 +20,10 @@ const nav = document.getElementById('nav');
     mobileNavOverlay.classList.remove('open');
     document.body.classList.remove('nav-open');
   }
-  burgerBtn.addEventListener('click', openMobileNav);
-  mobileNavClose.addEventListener('click', closeMobileNav);
-  mobileNavOverlay.addEventListener('click', closeMobileNav);
-  mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMobileNav));
+  if(burgerBtn) burgerBtn.addEventListener('click', openMobileNav);
+  if(mobileNavClose) mobileNavClose.addEventListener('click', closeMobileNav);
+  if(mobileNavOverlay) mobileNavOverlay.addEventListener('click', closeMobileNav);
+  if(mobileNav) mobileNav.querySelectorAll('a').forEach(a => a.addEventListener('click', closeMobileNav));
   document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeMobileNav(); });
 
 /* ---------- Plans / pricing (placeholder catalog, no live payment gateway yet) ---------- */
@@ -57,6 +57,7 @@ function formatNaira(n){ return "₦" + Number(n).toLocaleString("en-NG"); }
 
 function renderPlans(gridId){
   const grid = document.getElementById(gridId || "plansGrid");
+  if(!grid) return;
   grid.innerHTML = PLANS.map(cat => `
     <div class="plan-card">
       <h3>${cat.category}</h3>
@@ -717,8 +718,9 @@ document.getElementById("authOverlay").addEventListener("click", (e) => {
   if(e.target.id === "authOverlay") closeAuth();
 });
 
-/* ---------- Newsletter signup ---------- */
-document.getElementById("newsletterForm").addEventListener("submit", async (e) => {
+/* ---------- Newsletter signup (not every page has this form) ---------- */
+const newsletterForm = document.getElementById("newsletterForm");
+if(newsletterForm) newsletterForm.addEventListener("submit", async (e) => {
   e.preventDefault();
   const emailInput = document.getElementById("newsletterEmail");
   const msg = document.getElementById("newsletterMsg");

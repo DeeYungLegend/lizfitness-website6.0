@@ -158,6 +158,7 @@
 
   /* PLANS */
   .plans{padding:110px 0;background:var(--charcoal);border-top:1px solid var(--line);border-bottom:1px solid var(--line);}
+  .shop-page-head{padding-top:170px;border-top:none;}
   .plans-head{max-width:640px;margin-bottom:54px;}
   .plans-head h2{font-size:clamp(30px,4vw,46px);margin-top:18px;color:var(--cream);}
   .plans-head p{color:var(--muted);margin-top:16px;line-height:1.8;font-size:15px;}
@@ -423,6 +424,7 @@
   .hours-row.open span:last-child{color:var(--gold-light);font-weight:500;}
   .hours-row-multi{align-items:flex-start;}
   .hours-sessions{display:flex;flex-direction:column;gap:4px;text-align:right;}
+  .hours-sessions b{color:var(--gold-light);font-weight:500;}
   .note{margin-top:22px;font-size:13px;color:var(--muted2);line-height:1.7;}
 
   .contact-card{background:var(--charcoal);border:1px solid var(--line);padding:40px;}
