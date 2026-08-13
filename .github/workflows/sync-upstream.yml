@@ -1,31 +1,30 @@
 name: Sync upstream
 
 on:
-  schedule:  
-    - cron: '0 3 * * *'    # once a day at 3 AM UTC   # every 6 hours
-  workflow_dispatch:        # allows manual run
+  schedule:
+    - cron: '0 3 * * *'   # once a day
+  workflow_dispatch:
 
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5   # ← changed from @v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Add upstream
+      - name: Add upstream and fetch
         run: |
-          git remote add upstream git@github-emmapense:DeeYungLegend/lizfitness-website6.0
+          git remote add upstream https://github.com/DeeYungLegend/lizfitness-website6.0.git
           git fetch upstream
 
       - name: Merge only if needed
         run: |
-            git checkout main
-            # Check if upstream is ahead
-            if git merge-base --is-ancestor upstream/main HEAD; then
-                echo "Already up to date — nothing to push"
-                exit 0
-            fi
-            git merge upstream/main --no-edit
-            git push origin main
+          git checkout main
+          if git merge-base --is-ancestor upstream/main HEAD; then
+            echo "Already up to date — nothing to push"
+            exit 0
+          fi
+          git merge upstream/main --no-edit
+          git push origin main
