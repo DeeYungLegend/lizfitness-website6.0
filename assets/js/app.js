@@ -85,11 +85,18 @@ function renderPlans(gridId){
 renderPlans("plansGrid");
 
 /* ---------- Cart ---------- */
-const CART_KEY = "lf_cart";
+// Cart is scoped per logged-in member (lf_cart_<memberId>) so it doesn't leak
+// across accounts on a shared device; signed-out visitors get a separate
+// "guest" cart that's merged into their account cart the moment they log in.
+function cartKey(){
+  let m = null;
+  try{ m = JSON.parse(localStorage.getItem("lf_member")); }catch{}
+  return m ? `lf_cart_${m.id}` : "lf_cart_guest";
+}
 let cart = [];
-try{ cart = JSON.parse(localStorage.getItem(CART_KEY)) || []; }catch{ cart = []; }
+try{ cart = JSON.parse(localStorage.getItem(cartKey())) || []; }catch{ cart = []; }
 
-function saveCart(){ localStorage.setItem(CART_KEY, JSON.stringify(cart)); updateCartBadge(); }
+function saveCart(){ localStorage.setItem(cartKey(), JSON.stringify(cart)); updateCartBadge(); }
 
 function updateCartBadge(){
   const count = cart.reduce((n, it) => n + it.qty, 0);
@@ -99,6 +106,27 @@ function updateCartBadge(){
   });
 }
 updateCartBadge();
+
+// Folds anything added while browsing signed-out into the account's own cart,
+// then clears the guest cart so it doesn't linger for the next visitor.
+function mergeGuestCartInto(memberId){
+  let guestCart = [];
+  try{ guestCart = JSON.parse(localStorage.getItem("lf_cart_guest")) || []; }catch{ guestCart = []; }
+  if(!guestCart.length) return;
+
+  const memberKey = `lf_cart_${memberId}`;
+  let memberCart = [];
+  try{ memberCart = JSON.parse(localStorage.getItem(memberKey)) || []; }catch{ memberCart = []; }
+
+  guestCart.forEach(gi => {
+    const existing = memberCart.find(mi => mi.category === gi.category && mi.plan === gi.plan);
+    if(existing) existing.qty += gi.qty;
+    else memberCart.push(gi);
+  });
+
+  localStorage.setItem(memberKey, JSON.stringify(memberCart));
+  localStorage.removeItem("lf_cart_guest");
+}
 
 function addToCart(category, plan, price){
   const existing = cart.find(it => it.category === category && it.plan === plan);
@@ -363,6 +391,7 @@ async function handleAuthSubmit(e){
     }
     currentMember = member;
     saveSession(member);
+    mergeGuestCartInto(member.id);
     updateAuthButtons();
     const params = new URLSearchParams(location.search);
     const next = params.get("next");
