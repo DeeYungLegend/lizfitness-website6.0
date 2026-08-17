@@ -8,10 +8,13 @@ exports.handler = async (event) => {
     if (!memberId) return json(400, { error: "memberId query parameter is required." });
 
     const db = getDb();
-    const snap = await db.ref("orders").orderByChild("memberId").equalTo(memberId).get();
+    // Fetch-all + filter (like orders-list.js) instead of orderByChild, so this
+    // doesn't depend on a .indexOn rule existing for "memberId" in Firebase.
+    const snap = await db.ref("orders").get();
     const ordersObj = snap.exists() ? snap.val() : {};
     const orders = Object.entries(ordersObj)
       .map(([id, o]) => ({ id, ...o }))
+      .filter((o) => o.memberId === memberId)
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
     return json(200, { orders });

@@ -425,11 +425,11 @@ async function renderMemberTabBody(){
   const el = document.getElementById("memberTabBody");
   el.innerHTML = `<p class="empty-note">Loading…</p>`;
   try{
-    if(memberTab === "checkin") return renderMemberCheckin(el);
-    if(memberTab === "plans") return renderMemberPlans(el);
-    if(memberTab === "orders") return renderMemberOrders(el);
-    if(memberTab === "notifications") return renderMemberNotifications(el);
-    if(memberTab === "messages") return renderMemberMessages(el);
+    if(memberTab === "checkin") return await renderMemberCheckin(el);
+    if(memberTab === "plans") return await renderMemberPlans(el);
+    if(memberTab === "orders") return await renderMemberOrders(el);
+    if(memberTab === "notifications") return await renderMemberNotifications(el);
+    if(memberTab === "messages") return await renderMemberMessages(el);
   }catch(err){
     el.innerHTML = `<p class="empty-note">${err.message}</p>`;
   }
@@ -563,11 +563,11 @@ async function renderAdminTabBody(){
   const el = document.getElementById("adminTabBody");
   el.innerHTML = `<p class="empty-note">Loading…</p>`;
   try{
-    if(adminTab === "members") return renderAdminMembers(el);
-    if(adminTab === "orders") return renderAdminOrders(el);
-    if(adminTab === "messages") return renderAdminMessages(el);
-    if(adminTab === "notifications") return renderAdminNotifications(el);
-    if(adminTab === "announcements") return renderAdminAnnouncements(el);
+    if(adminTab === "members") return await renderAdminMembers(el);
+    if(adminTab === "orders") return await renderAdminOrders(el);
+    if(adminTab === "messages") return await renderAdminMessages(el);
+    if(adminTab === "notifications") return await renderAdminNotifications(el);
+    if(adminTab === "announcements") return await renderAdminAnnouncements(el);
   }catch(err){
     el.innerHTML = `<p class="empty-note">${err.message}</p>`;
   }
