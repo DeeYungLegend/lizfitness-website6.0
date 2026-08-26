@@ -335,6 +335,12 @@
   .status-pill.confirmed{border-color:#5fa876;color:#8fd6a3;}
   .status-pill.cancelled{border-color:var(--crimson);color:#d9776b;}
 
+  .role-pill{
+    display:inline-block;margin-left:8px;padding:3px 9px;font-size:9.5px;letter-spacing:0.05em;text-transform:uppercase;
+    border:1px solid var(--line);color:var(--muted2);vertical-align:middle;
+  }
+  .role-pill.admin{border-color:var(--gold);color:var(--gold-light);}
+
   .order-card{border-bottom:1px solid var(--line);padding:16px 0;}
   .order-card:first-child{border-top:1px solid var(--line);}
   .order-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px;}

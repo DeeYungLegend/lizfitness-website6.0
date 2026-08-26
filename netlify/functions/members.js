@@ -20,6 +20,7 @@ exports.handler = async (event) => {
         name: m.name,
         email: m.email,
         joined: m.joined,
+        role: m.role || "member",
         visits: dates.length,
         dates,
       };

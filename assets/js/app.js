@@ -606,7 +606,7 @@ async function renderAdminMembers(el){
   const { members } = await apiMembers();
   const rows = members.map(m => `
       <div class="admin-row">
-        <div><div class="m-name">${m.name}</div><div class="m-email">${m.email} · joined ${m.joined}</div></div>
+        <div><div class="m-name">${m.name} <span class="role-pill ${m.role === "admin" ? "admin" : ""}">${m.role === "admin" ? "Admin" : "Member"}</span></div><div class="m-email">${m.email} · joined ${m.joined}</div></div>
         <div class="admin-stats">
           <div><span class="n">${m.visits}</span><span class="l">visits</span></div>
           <div><span class="n">${computeStreak(m.dates)}</span><span class="l">streak</span></div>
