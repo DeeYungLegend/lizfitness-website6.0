@@ -33,10 +33,11 @@ Go to Site configuration → Environment variables and set:
 - `FIREBASE_DB_URL` — your Realtime Database URL, shown at the top of the Realtime Database page, looks like `https://your-project-default-rtdb.region.firebasedatabase.app`
 - `ADMIN_SIGNUP_CODE` — a password of your choosing that gates admin account creation (see below). Pick something you wouldn't mind rotating later; it's not tied to any one person's login.
 
-### Optional: real email sending (newsletter + announcements)
-Announcements and the newsletter signup work today — they just store data and skip the email step until you add:
+### Optional: real email sending (newsletter, announcements, new-order alerts)
+Announcements, the newsletter signup, and new-order alerts all work today — they just store data (and skip the email step) until you add:
 - `RESEND_API_KEY` — create a free account at [resend.com](https://resend.com), verify a sending domain (or use their test sender to start), and generate an API key
 - `RESEND_FROM` — e.g. `Lizfitness Gym <hello@yourdomain.com>` (optional — defaults to Resend's test sender if unset)
+- `ADMIN_NOTIFY_EMAIL` — the owner's personal email address. When set, every new order emails this address immediately with the customer's name, phone, email, what they ordered, and the total — so she finds out without opening the site, and has a phone number to actually call or message them on. This is deliberately email, not WhatsApp: your client didn't want a payment platform, and this isn't one — it's just a notification, sent through infrastructure already in this repo, with no third-party WhatsApp bot risk.
 
 Without these, member/owner notifications still work in-app; only the actual email delivery is skipped (logged as a warning in the function logs).
 
