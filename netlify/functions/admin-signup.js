@@ -9,7 +9,7 @@ exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
 
   try {
-    const { name, email, password, adminCode } = JSON.parse(event.body || "{}");
+    const { name, email, phone, password, adminCode } = JSON.parse(event.body || "{}");
 
     if (!name || !name.trim() || !email || !email.trim() || !password || password.length < 4) {
       return json(400, { error: "Name, email, and a password (4+ characters) are required." });
@@ -38,6 +38,7 @@ exports.handler = async (event) => {
     const doc = {
       name: name.trim(),
       email: email.trim().toLowerCase(),
+      phone: phone ? phone.trim() : "",
       passwordHash,
       joined: todayStr(),
       role: "admin",
@@ -50,6 +51,7 @@ exports.handler = async (event) => {
       id: memberId,
       name: doc.name,
       email: doc.email,
+      phone: doc.phone,
       joined: doc.joined,
       role: doc.role,
     });

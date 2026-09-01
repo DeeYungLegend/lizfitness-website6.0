@@ -236,13 +236,13 @@ async function apiCall(path, options){
   return data;
 }
 
-const apiSignup = (name, email, password) => apiCall("signup", {
+const apiSignup = (name, email, phone, password) => apiCall("signup", {
   method: "POST", headers: {"Content-Type":"application/json"},
-  body: JSON.stringify({ name, email, password })
+  body: JSON.stringify({ name, email, phone, password })
 });
-const apiAdminSignup = (name, email, password, adminCode) => apiCall("admin-signup", {
+const apiAdminSignup = (name, email, phone, password, adminCode) => apiCall("admin-signup", {
   method: "POST", headers: {"Content-Type":"application/json"},
-  body: JSON.stringify({ name, email, password, adminCode })
+  body: JSON.stringify({ name, email, phone, password, adminCode })
 });
 const apiLogin = (email, password) => apiCall("login", {
   method: "POST", headers: {"Content-Type":"application/json"},
@@ -352,6 +352,7 @@ function renderAuthForm(err){
     <form id="authForm">
       ${authMode === "signup" ? `<div class="field-group"><label>Full Name</label><input type="text" id="f_name" required></div>` : ""}
       <div class="field-group"><label>Email</label><input type="email" id="f_email" required></div>
+      ${authMode === "signup" ? `<div class="field-group"><label>Phone Number</label><input type="tel" id="f_phone" placeholder="e.g. 08012345678" required></div>` : ""}
       <div class="field-group"><label>Password</label><input type="password" id="f_pass" required></div>
       ${authMode === "signup" ? `
         <div class="admin-code-row"><button type="button" class="admin-code-link" onclick="toggleAdminCode()" id="adminCodeToggleBtn">Staff? Enter your admin invite code</button></div>
@@ -383,9 +384,10 @@ async function handleAuthSubmit(e){
     let member;
     if(authMode === "signup"){
       const name = document.getElementById("f_name").value.trim();
+      const phone = document.getElementById("f_phone").value.trim();
       const adminCodeField = document.getElementById("f_admincode");
       const adminCode = adminCodeField ? adminCodeField.value.trim() : "";
-      member = adminCode ? await apiAdminSignup(name, email, pass, adminCode) : await apiSignup(name, email, pass);
+      member = adminCode ? await apiAdminSignup(name, email, phone, pass, adminCode) : await apiSignup(name, email, phone, pass);
     } else {
       member = await apiLogin(email, pass);
     }
@@ -606,7 +608,7 @@ async function renderAdminMembers(el){
   const { members } = await apiMembers();
   const rows = members.map(m => `
       <div class="admin-row">
-        <div><div class="m-name">${m.name} <span class="role-pill ${m.role === "admin" ? "admin" : ""}">${m.role === "admin" ? "Admin" : "Member"}</span></div><div class="m-email">${m.email} · joined ${m.joined}</div></div>
+        <div><div class="m-name">${m.name} <span class="role-pill ${m.role === "admin" ? "admin" : ""}">${m.role === "admin" ? "Admin" : "Member"}</span></div><div class="m-email">${m.email}${m.phone ? " · " + m.phone : ""} · joined ${m.joined}</div></div>
         <div class="admin-stats">
           <div><span class="n">${m.visits}</span><span class="l">visits</span></div>
           <div><span class="n">${computeStreak(m.dates)}</span><span class="l">streak</span></div>
@@ -623,7 +625,7 @@ async function renderAdminOrders(el){
       <div class="order-top">
         <div>
           <div class="m-name">${o.memberName}</div>
-          <div class="m-email">${o.memberEmail} · ${timeAgo(o.createdAt)}</div>
+          <div class="m-email">${o.memberEmail}${o.memberPhone ? " · " + o.memberPhone : ""} · ${timeAgo(o.createdAt)}</div>
         </div>
         <span class="status-pill ${o.status}">${o.status}</span>
       </div>

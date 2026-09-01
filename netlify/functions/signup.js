@@ -5,10 +5,10 @@ exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
 
   try {
-    const { name, email, password } = JSON.parse(event.body || "{}");
+    const { name, email, phone, password } = JSON.parse(event.body || "{}");
 
-    if (!name || !name.trim() || !email || !email.trim() || !password || password.length < 4) {
-      return json(400, { error: "Name, email, and a password (4+ characters) are required." });
+    if (!name || !name.trim() || !email || !email.trim() || !phone || !phone.trim() || !password || password.length < 4) {
+      return json(400, { error: "Name, email, phone number, and a password (4+ characters) are required." });
     }
 
     const db = getDb();
@@ -26,6 +26,7 @@ exports.handler = async (event) => {
     const doc = {
       name: name.trim(),
       email: email.trim().toLowerCase(),
+      phone: phone.trim(),
       passwordHash,
       joined: todayStr(),
       role: "member",
@@ -38,6 +39,7 @@ exports.handler = async (event) => {
       id: memberId,
       name: doc.name,
       email: doc.email,
+      phone: doc.phone,
       joined: doc.joined,
       role: doc.role,
     });

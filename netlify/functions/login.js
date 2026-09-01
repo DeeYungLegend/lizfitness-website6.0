@@ -27,6 +27,7 @@ exports.handler = async (event) => {
       id: memberId,
       name: member.name,
       email: member.email,
+      phone: member.phone || "",
       joined: member.joined,
       role: member.role || "member",
     });

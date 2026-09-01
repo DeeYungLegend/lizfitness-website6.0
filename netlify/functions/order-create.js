@@ -1,4 +1,5 @@
 const { getDb, json } = require("./utils/firebase");
+const { sendEmail } = require("./utils/email");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
@@ -28,6 +29,7 @@ exports.handler = async (event) => {
       memberId,
       memberName: member.name,
       memberEmail: member.email,
+      memberPhone: member.phone || "",
       items: cleanItems,
       total,
       status: "pending",
@@ -43,6 +45,33 @@ exports.handler = async (event) => {
       read: false,
       createdAt,
     });
+
+    // Best-effort email straight to the owner's personal inbox so she finds
+    // out without opening the site — skipped silently if ADMIN_NOTIFY_EMAIL
+    // or RESEND_API_KEY aren't set (same graceful-degradation as everywhere else).
+    const notifyEmail = process.env.ADMIN_NOTIFY_EMAIL;
+    if (notifyEmail) {
+      const itemsHtml = cleanItems
+        .map((it) => `${it.qty}&times; ${it.plan} (${it.category}) &mdash; &#8358;${(it.price * it.qty).toLocaleString("en-NG")}`)
+        .join("<br>");
+      // Awaited on purpose — a serverless function's background work isn't
+      // guaranteed to finish once the response is returned, so this has to
+      // complete (or fail) before we respond. .catch keeps an email hiccup
+      // from failing the order itself, which has already been saved above.
+      await sendEmail({
+        to: notifyEmail,
+        subject: `New order — ${member.name} — ₦${total.toLocaleString("en-NG")}`,
+        html: `
+          <h2>New order placed</h2>
+          <p><b>Customer:</b> ${member.name}<br>
+          <b>Phone:</b> ${member.phone || "not provided"}<br>
+          <b>Email:</b> ${member.email}</p>
+          <p><b>Order:</b><br>${itemsHtml}</p>
+          <p><b>Total: &#8358;${total.toLocaleString("en-NG")}</b></p>
+          <p style="color:#888;font-size:12px;">Status is "pending" until you confirm payment in the Admin Dashboard's Orders tab.</p>
+        `,
+      }).catch(() => {});
+    }
 
     return json(200, { id: orderRef.key, ...order });
   } catch (err) {
