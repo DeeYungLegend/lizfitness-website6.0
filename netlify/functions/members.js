@@ -1,4 +1,5 @@
 const { getDb, json } = require("./utils/firebase");
+const { isMemberActive } = require("./utils/membership");
 
 // NOTE: same caveat as before — no access control on this endpoint yet.
 // Fine for a small private deployment, worth locking down before wide launch.
@@ -22,6 +23,9 @@ exports.handler = async (event) => {
         phone: m.phone || "",
         joined: m.joined,
         role: m.role || "member",
+        membershipActive: isMemberActive(m),
+        membershipPlan: m.membershipPlan || "",
+        membershipExpiresAt: m.membershipExpiresAt || "",
         visits: dates.length,
         dates,
       };

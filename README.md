@@ -2,12 +2,31 @@
 
 ## Pages
 - `index.html` — homepage (About, Services, Gallery, Connect, Results, Visit)
-- `shop.html` — Plans, subscriptions, and products, with cart
+- `membership.html` — the paid membership catalog (Gym Session Fee, Fitness Subscription, Private Session). Anyone can look, but checkout requires login.
+- `shop.html` — members-only products (currently just Diet & Organic Supplement Drink). Locked until you're an active, paid member — see "Paid membership" below.
 - `login.html` — full-page log in / sign up (member or admin)
-- `dashboard.html` — a logged-in member's own page: Check-In, Plans, My Orders, Notifications, Messages. Requires login; redirects to `index.html` otherwise.
+- `dashboard.html` — a logged-in member's own page: Check-In, Plans, My Orders, Notifications, Messages. Requires login and an active membership; redirects otherwise.
 - `admin.html` — the owner's dashboard: Members, Orders, Messages, Notifications, Announce. Requires an admin account; redirects non-admins to `dashboard.html`.
 
-Logging in (or signing up) takes you straight to `dashboard.html` or `admin.html` depending on your role — there's no popup dashboard anymore, just your own page, and you stay on it until you log out.
+Logging in (or signing up) takes you to whichever of the above actually applies: admins → `admin.html`, members without an active membership → `membership.html` to pick one, active members → `dashboard.html`. There's no popup dashboard — just your own page, and you stay on it until you log out.
+
+## Paid membership
+The gym owner wants membership to require payment upfront, so `dashboard.html` and `shop.html` are both locked behind an **active membership** — checked live via `membershipActive` (and `membershipExpiresAt`) on the member's record, not just being logged in.
+
+**How someone becomes a member:**
+1. They sign up (name, email, phone, password) and land on `membership.html`.
+2. They pick a plan, add to cart, check out. This calls `order-create.js`, which records the order as `"pending"`, emails you (`ADMIN_NOTIFY_EMAIL`) with their details and a **"Confirm Payment Received"** button, and tells the member someone will reach out on WhatsApp.
+3. You contact them on WhatsApp using the phone number from that email, and collect payment however you normally do (cash, transfer, etc.) — still no payment platform on the site, per the client's request.
+4. You confirm it **either way** — both do the exact same thing:
+   - Tap **"Confirm Payment Received"** right in that email (no login needed), or
+   - Log into `admin.html` → Orders tab → **Mark Confirmed** on their order.
+5. That activates their membership (`membershipActive: true`, with an expiry date computed from the plan — e.g. Monthly = 30 days from now, or from their current expiry if they're renewing early), emails them a welcome/confirmation, and unlocks `dashboard.html` and `shop.html` for them.
+
+**If someone doesn't pay / their membership lapses:** it simply stops counting as active once `membershipExpiresAt` passes — no cron job needed, checked live on every login/page load. You can also end someone's membership early yourself: Admin Dashboard → Members tab → **Revoke** button (next to any currently-active member).
+
+**Existing accounts from before this feature** are grandfathered in as active automatically (a member record with no `membershipActive` field at all is treated as active) — nobody who was already using the site gets locked out. Every new signup from now on starts unpaid and has to go through the flow above.
+
+Product purchases in `shop.html` don't grant or extend membership by themselves — only the 3 categories in `membership.html` do (see `MEMBERSHIP_CATEGORIES` in `netlify/functions/utils/membership.js`, which has to stay in sync with `MEMBERSHIP_PLANS` in `assets/js/app.js`).
 
 ## What's in this folder
 - `assets/css/style.css` — all styling
@@ -19,12 +38,15 @@ Logging in (or signing up) takes you straight to `dashboard.html` or `admin.html
   - `checkin.js` / `attendance.js` — daily check-in tracking
   - `members.js` — all members + visit counts, for the admin Members tab
   - `order-create.js` / `orders-list.js` / `my-orders.js` / `order-update-status.js` — the Plans/cart checkout flow and order history (placeholder payment — no real gateway wired in yet, see below)
+  - `membership-confirm.js` — the one-click "Confirm Payment Received" link from the order-alert email; validates a per-order token, then does the same activation as `order-update-status.js`
+  - `member-revoke.js` — admin action to end a member's active status early
   - `notifications-list.js` / `notifications-mark-read.js` — in-app notification feeds (`notifications/admin` for the owner, `notifications/{memberId}` per member)
   - `messages-list.js` / `messages-send.js` / `messages-threads.js` — admin ↔ member chat threads
   - `announcement-create.js` / `announcements-list.js` — owner publishes a special program/product; fans out a notification to every member and emails the newsletter list
   - `newsletter-subscribe.js` — public email signup (footer form), independent of member accounts
   - `utils/firebase.js` — Realtime Database connection + shared helpers
   - `utils/email.js` — Resend API wrapper (see below)
+  - `utils/membership.js` — membership categories, plan durations, the shared "is this member currently active" check, and the activation logic used by both confirm paths
 - `package.json` — needs `firebase-admin` and `bcryptjs`
 
 ## Environment variables required in Netlify
@@ -44,7 +66,7 @@ Without these, member/owner notifications still work in-app; only the actual ema
 ## How to deploy
 1. Push everything in this folder to your GitHub repo (already connected — this repo).
 2. Confirm the environment variables above are set in Netlify.
-3. Wait for the deploy to finish, then test: sign up a member, check in, add a plan to your cart and check out, and confirm it shows up under the admin Orders tab.
+3. Wait for the deploy to finish, then test the full loop: sign up a member (lands on `membership.html`), pick a plan and check out, confirm it via either the emailed link or the admin Orders tab, and verify the member now has `dashboard.html`/`shop.html` access.
 4. To confirm it's really working, check Firebase Console → Realtime Database — you should see `members`, `attendance`, `orders`, `notifications`, `messages`, `announcements`, and `newsletter` trees appear as you use the site.
 
 ## To make someone an admin

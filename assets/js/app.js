@@ -27,7 +27,10 @@ const nav = document.getElementById('nav');
   document.addEventListener('keydown', (e) => { if(e.key === 'Escape') closeMobileNav(); });
 
 /* ---------- Plans / pricing (placeholder catalog, no live payment gateway yet) ---------- */
-const PLANS = [
+// Membership plans are gated: Shop doesn't open until a member has an active,
+// confirmed membership. Shop products (below) don't grant membership by
+// themselves — they're just for sale to members who already have one.
+const MEMBERSHIP_PLANS = [
   { category: "Gym Session Fee", items: [
     { plan: "Daily", price: 3500 },
     { plan: "Weekly", price: 9000 },
@@ -44,6 +47,8 @@ const PLANS = [
     { plan: "Mainland", price: 150000 },
     { plan: "Island", price: 250000 },
   ]},
+];
+const SHOP_PRODUCTS = [
   { category: "Diet & Organic Supplement Drink", items: [
     { plan: "Weight Loss Diet Monthly", price: 15000 },
     { plan: "Weight Gain Diet Monthly", price: 20000 },
@@ -52,13 +57,15 @@ const PLANS = [
     { plan: "Detox Drink", price: 2000 },
   ]},
 ];
+const ALL_PLANS = [...MEMBERSHIP_PLANS, ...SHOP_PRODUCTS];
+const MEMBERSHIP_CATEGORY_NAMES = MEMBERSHIP_PLANS.map(c => c.category);
 
 function formatNaira(n){ return "₦" + Number(n).toLocaleString("en-NG"); }
 
-function renderPlans(gridId){
+function renderPlans(gridId, catalog){
   const grid = document.getElementById(gridId || "plansGrid");
   if(!grid) return;
-  grid.innerHTML = PLANS.map(cat => `
+  grid.innerHTML = (catalog || ALL_PLANS).map(cat => `
     <div class="plan-card">
       <h3>${cat.category}</h3>
       ${cat.items.map(it => `
@@ -82,7 +89,9 @@ function renderPlans(gridId){
     });
   });
 }
-renderPlans("plansGrid");
+if(document.body.dataset.page === "shop") renderPlans("plansGrid", SHOP_PRODUCTS);
+else if(document.body.dataset.page === "membership") renderPlans("plansGrid", MEMBERSHIP_PLANS);
+else renderPlans("plansGrid", ALL_PLANS);
 
 /* ---------- Cart ---------- */
 // Cart is scoped per logged-in member (lf_cart_<memberId>) so it doesn't leak
@@ -209,9 +218,9 @@ async function handleCheckout(){
     saveCart();
     document.getElementById("cartBox").innerHTML = `
       <button class="modal-close" onclick="closeCart()">&times;</button>
-      <div class="eyebrow modal-eyebrow">Order Placed</div>
+      <div class="eyebrow modal-eyebrow">${order.isMembershipOrder ? "Membership Requested" : "Order Placed"}</div>
       <h2>Thanks, ${currentMember.name.split(" ")[0]}!</h2>
-      <p class="modal-sub">Your order for <b style="color:var(--gold-light)">${formatNaira(order.total)}</b> is in as <b>pending</b>. A team member will reach out on WhatsApp to confirm and collect payment.</p>
+      <p class="modal-sub">Your ${order.isMembershipOrder ? "membership request" : "order"} for <b style="color:var(--gold-light)">${formatNaira(order.total)}</b> is in as <b>pending</b>. A team member will reach out on WhatsApp to confirm and collect payment${order.isMembershipOrder ? " — your membership activates as soon as that's done" : ""}.</p>
       <button class="btn btn-outline btn-block" onclick="closeCart()">Done</button>
     `;
   }catch(err){
@@ -259,6 +268,10 @@ const apiOrdersList = () => apiCall("orders-list", { method: "GET" });
 const apiOrderUpdateStatus = (orderId, status) => apiCall("order-update-status", {
   method: "POST", headers: {"Content-Type":"application/json"},
   body: JSON.stringify({ orderId, status })
+});
+const apiMemberRevoke = (memberId) => apiCall("member-revoke", {
+  method: "POST", headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ memberId })
 });
 const apiNotificationsList = (scope) => apiCall(`notifications-list?scope=${encodeURIComponent(scope)}`, { method: "GET" });
 const apiNotificationsMarkAll = (scope) => apiCall("notifications-mark-read", {
@@ -317,11 +330,21 @@ let currentMember = loadSession();
 let authMode = "login";
 updateAuthButtons();
 
+// Where a just-logged-in (or already-logged-in) account belongs: admins go
+// to their dashboard, members without an active paid membership go pick one,
+// active members go to their own dashboard.
+function landingPageFor(member){
+  if(member.role === "admin") return "admin.html";
+  if(!member.membershipActive) return "membership.html";
+  return "dashboard.html";
+}
+
 function openAuth(){
   const params = new URLSearchParams(location.search);
   const next = params.get("next");
   if(currentMember){
-    location.href = next || (currentMember.role === "admin" ? "admin.html" : "dashboard.html");
+    const landing = landingPageFor(currentMember);
+    location.href = (landing !== "membership.html" && next) ? next : landing;
     return;
   }
   location.href = "login.html" + (location.pathname.endsWith("login.html") ? "" : "?next=" + encodeURIComponent(location.pathname));
@@ -397,7 +420,11 @@ async function handleAuthSubmit(e){
     updateAuthButtons();
     const params = new URLSearchParams(location.search);
     const next = params.get("next");
-    location.href = next || (member.role === "admin" ? "admin.html" : "dashboard.html");
+    const landing = landingPageFor(member);
+    // Only honor "next" (e.g. bounced back from checkout) if they actually
+    // land somewhere they're allowed into — a brand-new/inactive member gets
+    // sent to pick a membership regardless, since Shop stays locked either way.
+    location.href = (landing !== "membership.html" && next) ? next : landing;
   }catch(err){
     renderAuthForm(err.message);
   }
@@ -411,7 +438,9 @@ async function renderDashboard(){
   box.className = "dash-shell";
   box.innerHTML = `
     <div class="dash-hi">Welcome back</div>
-    <div class="dash-name dash-name-lg">${currentMember.name.split(" ")[0]}</div>
+    <div class="dash-name dash-name-lg">${currentMember.name.split(" ")[0]}
+      ${currentMember.role !== "admin" ? `<span class="status-pill ${currentMember.membershipActive ? "confirmed" : "cancelled"}" style="vertical-align:middle;margin-left:10px;">${currentMember.membershipActive ? `Member${currentMember.membershipExpiresAt ? ` until ${currentMember.membershipExpiresAt.slice(0,10)}` : ""}` : "Not a member"}</span>` : ""}
+    </div>
     <div class="dash-tabs" id="memberTabs">
       <button class="dash-tab" data-tab="checkin">Check-In</button>
       <button class="dash-tab" data-tab="plans">Plans</button>
@@ -608,13 +637,26 @@ async function renderAdminMembers(el){
   const { members } = await apiMembers();
   const rows = members.map(m => `
       <div class="admin-row">
-        <div><div class="m-name">${m.name} <span class="role-pill ${m.role === "admin" ? "admin" : ""}">${m.role === "admin" ? "Admin" : "Member"}</span></div><div class="m-email">${m.email}${m.phone ? " · " + m.phone : ""} · joined ${m.joined}</div></div>
+        <div>
+          <div class="m-name">${m.name} <span class="role-pill ${m.role === "admin" ? "admin" : ""}">${m.role === "admin" ? "Admin" : "Member"}</span></div>
+          <div class="m-email">${m.email}${m.phone ? " · " + m.phone : ""} · joined ${m.joined}</div>
+          ${m.role === "admin" ? "" : `<div class="m-email">${m.membershipActive
+            ? `<span class="status-pill confirmed">Member${m.membershipExpiresAt ? ` until ${m.membershipExpiresAt.slice(0,10)}` : ""}</span>`
+            : `<span class="status-pill cancelled">Not a member</span>`}</div>`}
+        </div>
         <div class="admin-stats">
           <div><span class="n">${m.visits}</span><span class="l">visits</span></div>
           <div><span class="n">${computeStreak(m.dates)}</span><span class="l">streak</span></div>
+          ${m.role !== "admin" && m.membershipActive ? `<button class="admin-revoke-btn" onclick="handleRevokeMembership('${m.id}','${m.name.replace(/'/g, "\\'")}')">Revoke</button>` : ""}
         </div>
       </div>`).join("");
   el.innerHTML = `<h3 style="color:var(--cream);font-size:15px;margin-bottom:14px;">Members (${members.length})</h3>${members.length ? rows : `<p class="empty-note">No members have signed up yet.</p>`}`;
+}
+
+async function handleRevokeMembership(memberId, name){
+  if(!confirm(`Remove ${name}'s active membership? They'll lose Shop access until they pay again.`)) return;
+  try{ await apiMemberRevoke(memberId); renderAdminTabBody(); }
+  catch(err){ alert(err.message); }
 }
 
 async function renderAdminOrders(el){
@@ -796,6 +838,7 @@ if(currentMember && currentMember.role === "admin"){
 
 if(pageType === "dashboard"){
   if(!currentMember) location.href = "index.html";
+  else if(currentMember.role !== "admin" && !currentMember.membershipActive) location.href = "membership.html";
   else renderDashboard();
 }
 if(pageType === "admin"){
@@ -803,10 +846,21 @@ if(pageType === "admin"){
   else if(currentMember.role !== "admin") location.href = "dashboard.html";
   else renderAdmin();
 }
+if(pageType === "shop"){
+  if(!currentMember) location.href = "login.html?next=" + encodeURIComponent(location.pathname);
+  else if(currentMember.role !== "admin" && !currentMember.membershipActive) location.href = "membership.html";
+}
+if(pageType === "membership"){
+  if(!currentMember) location.href = "login.html?next=membership.html";
+  else if(currentMember.role === "admin" || currentMember.membershipActive) location.href = landingPageFor(currentMember);
+  // else: nothing more to do — the plan grid was already rendered above.
+}
 if(pageType === "login"){
   if(currentMember){
     const params = new URLSearchParams(location.search);
-    location.href = params.get("next") || (currentMember.role === "admin" ? "admin.html" : "dashboard.html");
+    const next = params.get("next");
+    const landing = landingPageFor(currentMember);
+    location.href = (landing !== "membership.html" && next) ? next : landing;
   } else {
     renderAuthForm();
   }

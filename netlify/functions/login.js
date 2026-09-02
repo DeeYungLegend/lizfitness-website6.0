@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const { getDb, json, emailKey } = require("./utils/firebase");
+const { isMemberActive } = require("./utils/membership");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
@@ -30,6 +31,9 @@ exports.handler = async (event) => {
       phone: member.phone || "",
       joined: member.joined,
       role: member.role || "member",
+      membershipActive: isMemberActive(member),
+      membershipPlan: member.membershipPlan || "",
+      membershipExpiresAt: member.membershipExpiresAt || "",
     });
   } catch (err) {
     return json(500, { error: "Server error: " + err.message });

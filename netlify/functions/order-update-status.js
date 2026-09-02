@@ -1,4 +1,5 @@
 const { getDb, json } = require("./utils/firebase");
+const { confirmMembershipOrder } = require("./utils/membership");
 
 const ALLOWED = ["pending", "confirmed", "cancelled"];
 
@@ -27,6 +28,10 @@ exports.handler = async (event) => {
       read: false,
       createdAt: new Date().toISOString(),
     });
+
+    if (status === "confirmed" && order.isMembershipOrder) {
+      await confirmMembershipOrder(db, orderId, order);
+    }
 
     return json(200, { id: orderId, status });
   } catch (err) {

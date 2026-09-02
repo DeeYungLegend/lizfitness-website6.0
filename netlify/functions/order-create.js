@@ -1,5 +1,7 @@
+const crypto = require("crypto");
 const { getDb, json } = require("./utils/firebase");
 const { sendEmail } = require("./utils/email");
+const { isMembershipOrder } = require("./utils/membership");
 
 exports.handler = async (event) => {
   if (event.httpMethod !== "POST") return json(405, { error: "Method not allowed" });
@@ -24,6 +26,9 @@ exports.handler = async (event) => {
     const total = cleanItems.reduce((sum, it) => sum + it.price * it.qty, 0);
     const createdAt = new Date().toISOString();
 
+    const confirmToken = crypto.randomBytes(24).toString("hex");
+    const membershipOrder = isMembershipOrder({ items: cleanItems });
+
     const orderRef = db.ref("orders").push();
     const order = {
       memberId,
@@ -33,6 +38,8 @@ exports.handler = async (event) => {
       items: cleanItems,
       total,
       status: "pending",
+      isMembershipOrder: membershipOrder,
+      confirmToken,
       createdAt,
     };
     await orderRef.set(order);
@@ -54,21 +61,34 @@ exports.handler = async (event) => {
       const itemsHtml = cleanItems
         .map((it) => `${it.qty}&times; ${it.plan} (${it.category}) &mdash; &#8358;${(it.price * it.qty).toLocaleString("en-NG")}`)
         .join("<br>");
+      const siteUrl = process.env.URL || "";
+      const confirmLink = `${siteUrl}/.netlify/functions/membership-confirm?orderId=${orderRef.key}&token=${confirmToken}`;
+      const heading = membershipOrder ? "Someone wants to become a member" : "New shop order placed";
+      const confirmButton = membershipOrder && siteUrl ? `
+          <p style="margin:22px 0;">
+            <a href="${confirmLink}" style="background:#caa042;color:#0b0b0a;padding:14px 22px;text-decoration:none;font-weight:bold;border-radius:3px;display:inline-block;">
+              Confirm Payment Received
+            </a>
+          </p>
+          <p style="color:#888;font-size:12px;">Tap that once you've received payment from ${member.name} — it activates their membership and emails them automatically. You can also do this from the Admin Dashboard's Orders tab.</p>
+        ` : `<p style="color:#888;font-size:12px;">Status is "pending" until you confirm payment in the Admin Dashboard's Orders tab.</p>`;
+
       // Awaited on purpose — a serverless function's background work isn't
       // guaranteed to finish once the response is returned, so this has to
       // complete (or fail) before we respond. .catch keeps an email hiccup
       // from failing the order itself, which has already been saved above.
       await sendEmail({
         to: notifyEmail,
-        subject: `New order — ${member.name} — ₦${total.toLocaleString("en-NG")}`,
+        subject: `${heading} — ${member.name} — ₦${total.toLocaleString("en-NG")}`,
         html: `
-          <h2>New order placed</h2>
-          <p><b>Customer:</b> ${member.name}<br>
+          <h2>${heading}</h2>
+          <p><b>Name:</b> ${member.name}<br>
           <b>Phone:</b> ${member.phone || "not provided"}<br>
           <b>Email:</b> ${member.email}</p>
-          <p><b>Order:</b><br>${itemsHtml}</p>
+          <p><b>${membershipOrder ? "Membership plan picked" : "Order"}:</b><br>${itemsHtml}</p>
           <p><b>Total: &#8358;${total.toLocaleString("en-NG")}</b></p>
-          <p style="color:#888;font-size:12px;">Status is "pending" until you confirm payment in the Admin Dashboard's Orders tab.</p>
+          ${membershipOrder ? `<p>A message has already gone to ${member.name.split(" ")[0]} saying someone from the team will reach out on WhatsApp to confirm and collect payment.</p>` : ""}
+          ${confirmButton}
         `,
       }).catch(() => {});
     }

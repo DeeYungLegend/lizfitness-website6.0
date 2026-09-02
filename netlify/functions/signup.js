@@ -30,6 +30,12 @@ exports.handler = async (event) => {
       passwordHash,
       joined: todayStr(),
       role: "member",
+      // Explicitly false for every new signup going forward — membership has
+      // to be paid for and confirmed. Accounts from before this feature have
+      // no membershipActive field at all, which the rest of the app treats
+      // as "grandfathered in, already active" so nobody already using the
+      // site gets locked out retroactively.
+      membershipActive: false,
     };
 
     await newRef.set(doc);
@@ -42,6 +48,9 @@ exports.handler = async (event) => {
       phone: doc.phone,
       joined: doc.joined,
       role: doc.role,
+      membershipActive: doc.membershipActive,
+      membershipPlan: "",
+      membershipExpiresAt: "",
     });
   } catch (err) {
     return json(500, { error: "Server error: " + err.message });

@@ -385,6 +385,11 @@
   .admin-row .m-name{color:var(--cream);font-size:14px;}
   .admin-row .m-email{color:var(--muted2);font-size:11.5px;}
   .admin-stats{display:flex;gap:18px;align-items:center;}
+  .admin-revoke-btn{
+    background:none;border:1px solid var(--crimson);color:#d9776b;
+    font-size:10px;letter-spacing:0.05em;text-transform:uppercase;padding:6px 11px;cursor:pointer;
+  }
+  .admin-revoke-btn:hover{background:var(--crimson);color:var(--cream);}
   .admin-stats .n{font-family:'Oswald',sans-serif;color:var(--gold-light);font-size:15px;}
   .admin-stats .l{font-size:9px;color:var(--muted2);text-transform:uppercase;display:block;text-align:center;}
   .empty-note{color:var(--muted2);font-size:13px;text-align:center;padding:30px 0;}

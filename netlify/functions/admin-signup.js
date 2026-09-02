@@ -42,6 +42,7 @@ exports.handler = async (event) => {
       passwordHash,
       joined: todayStr(),
       role: "admin",
+      membershipActive: true, // staff aren't gated by the membership/payment flow
     };
 
     await newRef.set(doc);
@@ -54,6 +55,9 @@ exports.handler = async (event) => {
       phone: doc.phone,
       joined: doc.joined,
       role: doc.role,
+      membershipActive: doc.membershipActive,
+      membershipPlan: "",
+      membershipExpiresAt: "",
     });
   } catch (err) {
     return json(500, { error: "Server error: " + err.message });
