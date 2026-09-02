@@ -55,6 +55,8 @@ const SHOP_PRODUCTS = [
     { plan: "Organic Weight Gain / Body Builder Protein Powder", price: 20000 },
     { plan: "Weight Loss Drink (per 5ltrs)", price: 15000 },
     { plan: "Detox Drink", price: 2000 },
+    { plan: "Belly Blast", price: 2500 },
+    { plan: "Miracle Water (5 Litres)", price: 25000 },
   ]},
   { category: "Natural Drinks & Treats", items: [
     { plan: "Tiger Nut Drink", price: 2000, img: "assets/img/product-tigernut.jpg" },
