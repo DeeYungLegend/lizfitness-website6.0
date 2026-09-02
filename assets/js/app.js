@@ -272,6 +272,7 @@ const apiCheckin = (memberId) => apiCall("checkin", {
 });
 const apiAttendance = (memberId) => apiCall(`attendance?memberId=${encodeURIComponent(memberId)}`, { method: "GET" });
 const apiMembers = () => apiCall("members", { method: "GET" });
+const apiMemberStatus = (memberId) => apiCall(`member-status?memberId=${encodeURIComponent(memberId)}`, { method: "GET" });
 const apiMyOrders = (memberId) => apiCall(`my-orders?memberId=${encodeURIComponent(memberId)}`, { method: "GET" });
 const apiOrdersList = () => apiCall("orders-list", { method: "GET" });
 const apiOrderUpdateStatus = (orderId, status) => apiCall("order-update-status", {
@@ -346,6 +347,25 @@ function landingPageFor(member){
   if(member.role === "admin") return "admin.html";
   if(!member.membershipActive) return "membership.html";
   return "dashboard.html";
+}
+
+// Re-checks this member's record in case their membership got confirmed
+// elsewhere (the emailed one-click link, or the admin dashboard) while this
+// tab was already open — refreshes the saved session and moves on if so.
+async function checkMembershipStatus(){
+  const btn = document.getElementById("checkStatusBtn");
+  if(btn){ btn.disabled = true; btn.textContent = "Checking…"; }
+  try{
+    const fresh = await apiMemberStatus(currentMember.id);
+    currentMember = fresh;
+    saveSession(fresh);
+    updateAuthButtons();
+    if(fresh.membershipActive){
+      location.href = "dashboard.html";
+      return;
+    }
+  }catch{}
+  if(btn){ btn.disabled = false; btn.textContent = "I've Paid — Check My Status"; }
 }
 
 function openAuth(){
@@ -862,7 +882,14 @@ if(pageType === "shop"){
 if(pageType === "membership"){
   if(!currentMember) location.href = "login.html?next=membership.html";
   else if(currentMember.role === "admin" || currentMember.membershipActive) location.href = landingPageFor(currentMember);
-  // else: nothing more to do — the plan grid was already rendered above.
+  else{
+    // The plan grid was already rendered above. Membership might get
+    // confirmed from the emailed link while this tab is still open — that
+    // updates the database but not this already-loaded session, so check
+    // for it periodically (and let the "I've paid" button check right away).
+    checkMembershipStatus();
+    setInterval(checkMembershipStatus, 15000);
+  }
 }
 if(pageType === "login"){
   if(currentMember){
