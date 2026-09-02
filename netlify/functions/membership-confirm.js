@@ -39,17 +39,28 @@ exports.handler = async (event) => {
     }
 
     if (order.status === "confirmed") {
-      return page("Already confirmed", `${order.memberName}'s membership was already activated. Nothing more to do.`, true);
+      return page("Already confirmed", `${order.memberName}'s ${order.isMembershipOrder ? "membership was already activated" : "order was already confirmed"}. Nothing more to do.`, true);
     }
 
     await orderRef.update({ status: "confirmed" });
     if (order.isMembershipOrder) {
       await confirmMembershipOrder(db, orderId, order);
+    } else {
+      await db.ref(`notifications/${order.memberId}`).push({
+        title: "Order update",
+        body: `Your order for ₦${Number(order.total).toLocaleString("en-NG")} is now "confirmed".`,
+        type: "order",
+        orderId,
+        read: false,
+        createdAt: new Date().toISOString(),
+      });
     }
 
     return page(
       "Payment confirmed!",
-      `${order.memberName}'s ${order.isMembershipOrder ? "membership is now active" : "order is marked confirmed"}, and they've been emailed automatically. You're all set.`,
+      order.isMembershipOrder
+        ? `${order.memberName}'s membership is now active, and they've been emailed automatically. You're all set.`
+        : `${order.memberName}'s order is marked confirmed, and they've been notified in the app. You're all set.`,
       true
     );
   } catch (err) {

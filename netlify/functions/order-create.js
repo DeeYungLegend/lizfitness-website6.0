@@ -64,13 +64,17 @@ exports.handler = async (event) => {
       const siteUrl = process.env.URL || "";
       const confirmLink = `${siteUrl}/.netlify/functions/membership-confirm?orderId=${orderRef.key}&token=${confirmToken}`;
       const heading = membershipOrder ? "Someone wants to become a member" : "New shop order placed";
-      const confirmButton = membershipOrder && siteUrl ? `
+      // Same placeholder flow either way — no payment platform, order sits
+      // "pending" until confirmed. Only difference: confirming a membership
+      // order also activates their membership; confirming a shop order just
+      // marks it fulfilled. Both get the same one-click email confirm link.
+      const confirmButton = siteUrl ? `
           <p style="margin:22px 0;">
             <a href="${confirmLink}" style="background:#caa042;color:#0b0b0a;padding:14px 22px;text-decoration:none;font-weight:bold;border-radius:3px;display:inline-block;">
               Confirm Payment Received
             </a>
           </p>
-          <p style="color:#888;font-size:12px;">Tap that once you've received payment from ${member.name} — it activates their membership and emails them automatically. You can also do this from the Admin Dashboard's Orders tab.</p>
+          <p style="color:#888;font-size:12px;">Tap that once you've received payment from ${member.name}${membershipOrder ? " — it activates their membership and emails them automatically" : ""}. You can also do this from the Admin Dashboard's Orders tab.</p>
         ` : `<p style="color:#888;font-size:12px;">Status is "pending" until you confirm payment in the Admin Dashboard's Orders tab.</p>`;
 
       // Awaited on purpose — a serverless function's background work isn't
