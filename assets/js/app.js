@@ -56,6 +56,12 @@ const SHOP_PRODUCTS = [
     { plan: "Weight Loss Drink (per 5ltrs)", price: 15000 },
     { plan: "Detox Drink", price: 2000 },
   ]},
+  { category: "Natural Drinks & Treats", items: [
+    { plan: "Tiger Nut Drink", price: 2000, img: "assets/img/product-tigernut.jpg" },
+    { plan: "Creamy Yoghurt", price: 2500, img: "assets/img/product-yoghurt.jpg" },
+    { plan: "Creamy Parfait", price: 5000, img: "assets/img/product-parfait.jpg" },
+    { plan: "Kunu", price: 2000, img: "assets/img/product-kunu.jpg" },
+  ]},
 ];
 const ALL_PLANS = [...MEMBERSHIP_PLANS, ...SHOP_PRODUCTS];
 const MEMBERSHIP_CATEGORY_NAMES = MEMBERSHIP_PLANS.map(c => c.category);
@@ -70,6 +76,7 @@ function renderPlans(gridId, catalog){
       <h3>${cat.category}</h3>
       ${cat.items.map(it => `
         <div class="plan-item">
+          ${it.img ? `<div class="plan-item-thumb"><img src="${it.img}" alt="${it.plan}"></div>` : ""}
           <div class="plan-item-info">
             <span class="plan-item-name">${it.plan}</span>
             <span class="plan-item-price">${formatNaira(it.price)}</span>
