@@ -56,8 +56,12 @@ exports.handler = async (event) => {
     // Best-effort email straight to the owner's personal inbox so she finds
     // out without opening the site — skipped silently if ADMIN_NOTIFY_EMAIL
     // or RESEND_API_KEY aren't set (same graceful-degradation as everywhere else).
-    const notifyEmail = process.env.ADMIN_NOTIFY_EMAIL;
-    if (notifyEmail) {
+    // Supports multiple recipients: "owner@x.com, manager@y.com"
+    const notifyEmail = (process.env.ADMIN_NOTIFY_EMAIL || "")
+      .split(",")
+      .map((e) => e.trim())
+      .filter(Boolean);
+    if (notifyEmail.length) {
       const itemsHtml = cleanItems
         .map((it) => `${it.qty}&times; ${it.plan} (${it.category}) &mdash; &#8358;${(it.price * it.qty).toLocaleString("en-NG")}`)
         .join("<br>");
