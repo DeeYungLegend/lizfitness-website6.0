@@ -283,6 +283,10 @@ const apiMemberRevoke = (memberId) => apiCall("member-revoke", {
   method: "POST", headers: {"Content-Type":"application/json"},
   body: JSON.stringify({ memberId })
 });
+const apiMemberDelete = (memberId) => apiCall("member-delete", {
+  method: "POST", headers: {"Content-Type":"application/json"},
+  body: JSON.stringify({ memberId })
+});
 const apiNotificationsList = (scope) => apiCall(`notifications-list?scope=${encodeURIComponent(scope)}`, { method: "GET" });
 const apiNotificationsMarkAll = (scope) => apiCall("notifications-mark-read", {
   method: "POST", headers: {"Content-Type":"application/json"},
@@ -677,6 +681,7 @@ async function renderAdminMembers(el){
           <div><span class="n">${m.visits}</span><span class="l">visits</span></div>
           <div><span class="n">${computeStreak(m.dates)}</span><span class="l">streak</span></div>
           ${m.role !== "admin" && m.membershipActive ? `<button class="admin-revoke-btn" onclick="handleRevokeMembership('${m.id}','${m.name.replace(/'/g, "\\'")}')">Revoke</button>` : ""}
+          <button class="admin-delete-btn" onclick="handleDeleteMember('${m.id}','${m.name.replace(/'/g, "\\'")}')">Delete</button>
         </div>
       </div>`).join("");
   el.innerHTML = `<h3 style="color:var(--cream);font-size:15px;margin-bottom:14px;">Members (${members.length})</h3>${members.length ? rows : `<p class="empty-note">No members have signed up yet.</p>`}`;
@@ -685,6 +690,16 @@ async function renderAdminMembers(el){
 async function handleRevokeMembership(memberId, name){
   if(!confirm(`Remove ${name}'s active membership? They'll lose Shop access until they pay again.`)) return;
   try{ await apiMemberRevoke(memberId); renderAdminTabBody(); }
+  catch(err){ alert(err.message); }
+}
+
+async function handleDeleteMember(memberId, name){
+  if(!confirm(`Permanently delete ${name}'s account? This removes their profile, check-ins, orders, and messages for good — it can't be undone.`)) return;
+  try{
+    await apiMemberDelete(memberId);
+    if(currentMember && currentMember.id === memberId){ doLogout(); return; }
+    renderAdminTabBody();
+  }
   catch(err){ alert(err.message); }
 }
 

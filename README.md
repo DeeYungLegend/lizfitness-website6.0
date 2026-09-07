@@ -24,6 +24,8 @@ The gym owner wants membership to require payment upfront, so `dashboard.html` a
 
 **If someone doesn't pay / their membership lapses:** it simply stops counting as active once `membershipExpiresAt` passes — no cron job needed, checked live on every login/page load. You can also end someone's membership early yourself: Admin Dashboard → Members tab → **Revoke** button (next to any currently-active member).
 
+**To wipe out a test account entirely** (not just end their membership, but remove the account itself): Admin Dashboard → Members tab → **Delete** button, on any member or admin row. This permanently removes their profile, check-in history, orders, and message thread — there's a confirm prompt since it can't be undone, and it refuses to delete the last remaining admin account so you can't lock yourself out.
+
 **Existing accounts from before this feature** are grandfathered in as active automatically (a member record with no `membershipActive` field at all is treated as active) — nobody who was already using the site gets locked out. Every new signup from now on starts unpaid and has to go through the flow above.
 
 Product purchases in `shop.html` don't grant or extend membership by themselves — only the 3 categories in `membership.html` do (see `MEMBERSHIP_CATEGORIES` in `netlify/functions/utils/membership.js`, which has to stay in sync with `MEMBERSHIP_PLANS` in `assets/js/app.js`).
@@ -40,6 +42,7 @@ Product purchases in `shop.html` don't grant or extend membership by themselves 
   - `order-create.js` / `orders-list.js` / `my-orders.js` / `order-update-status.js` — the Plans/cart checkout flow and order history (placeholder payment — no real gateway wired in yet, see below)
   - `membership-confirm.js` — the one-click "Confirm Payment Received" link from the order-alert email; validates a per-order token, then does the same activation as `order-update-status.js`
   - `member-revoke.js` — admin action to end a member's active status early
+  - `member-delete.js` — admin action to permanently delete an account (profile, check-ins, orders, messages) — for clearing out test accounts
   - `notifications-list.js` / `notifications-mark-read.js` — in-app notification feeds (`notifications/admin` for the owner, `notifications/{memberId}` per member)
   - `messages-list.js` / `messages-send.js` / `messages-threads.js` — admin ↔ member chat threads
   - `announcement-create.js` / `announcements-list.js` — owner publishes a special program/product; fans out a notification to every member and emails the newsletter list
