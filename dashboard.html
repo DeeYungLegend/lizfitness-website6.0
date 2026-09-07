@@ -29,8 +29,24 @@
     <a href="admin.html" class="nav-cta admin-only-link" style="background:transparent;color:var(--gold);border:1px solid var(--gold);">Admin</a>
     <span class="dash-user-label">Hi, <b id="navUserName">there</b></span>
     <button class="nav-cta" style="border:none;cursor:pointer;font-family:'Inter',sans-serif;" onclick="doLogout()">Log Out</button>
+    <button class="burger" aria-label="Open menu" id="burgerBtn">☰</button>
   </div>
 </nav>
+
+<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+<div class="mobile-nav" id="mobileNav">
+  <div class="mobile-nav-top">
+    <button class="modal-close" style="position:static;" id="mobileNavClose" aria-label="Close menu">&times;</button>
+  </div>
+  <div class="mobile-nav-links">
+    <a href="index.html#about">About</a>
+    <a href="membership.html">Membership</a>
+    <a href="shop.html">Shop</a>
+  </div>
+  <a href="admin.html" class="btn btn-outline admin-only-link" style="justify-content:center;">Admin Dashboard</a>
+  <button class="btn btn-outline" style="justify-content:space-between;" onclick="closeMobileNav();openCart()">Cart <span class="cart-badge cart-badge-inline" id="cartBadgeMobile" style="display:none;">0</span></button>
+  <button class="btn btn-solid" style="border:none;cursor:pointer;font-family:'Inter',sans-serif;" onclick="doLogout()">Log Out</button>
+</div>
 
 <section class="dash-page-section">
   <div class="wrap">

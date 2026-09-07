@@ -25,8 +25,18 @@
     <a href="dashboard.html" class="nav-cta" style="background:transparent;color:var(--gold);border:1px solid var(--gold);">My Dashboard</a>
     <span class="dash-user-label">Hi, <b id="navUserName">there</b></span>
     <button class="nav-cta" style="border:none;cursor:pointer;font-family:'Inter',sans-serif;" onclick="doLogout()">Log Out</button>
+    <button class="burger" aria-label="Open menu" id="burgerBtn">☰</button>
   </div>
 </nav>
+
+<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+<div class="mobile-nav" id="mobileNav">
+  <div class="mobile-nav-top">
+    <button class="modal-close" style="position:static;" id="mobileNavClose" aria-label="Close menu">&times;</button>
+  </div>
+  <a href="dashboard.html" class="btn btn-outline" style="justify-content:center;">My Dashboard</a>
+  <button class="btn btn-solid" style="border:none;cursor:pointer;font-family:'Inter',sans-serif;" onclick="doLogout()">Log Out</button>
+</div>
 
 <section class="dash-page-section">
   <div class="wrap">
