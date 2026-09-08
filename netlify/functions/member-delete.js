@@ -17,14 +17,19 @@ exports.handler = async (event) => {
     if (!member) return json(404, { error: "Member not found." });
 
     if ((member.role || "member") === "admin") {
-      const allSnap = await db.ref("members").orderByChild("role").equalTo("admin").get();
-      const adminCount = allSnap.exists() ? Object.keys(allSnap.val()).length : 0;
+      const allMembersSnap = await db.ref("members").get();
+      const allMembers = allMembersSnap.exists() ? allMembersSnap.val() : {};
+      const adminCount = Object.values(allMembers).filter((m) => m.role === "admin").length;
       if (adminCount <= 1) {
         return json(400, { error: "Can't delete the only remaining admin account." });
       }
     }
 
-    const ordersSnap = await db.ref("orders").orderByChild("memberId").equalTo(memberId).get();
+    // Filtered in code rather than an indexed query (orderByChild/equalTo)
+    // so this doesn't depend on a ".indexOn" rule being set in Firebase —
+    // same plain-fetch-then-filter approach as orders-list.js/my-orders.js.
+    const ordersSnap = await db.ref("orders").get();
+    const allOrders = ordersSnap.exists() ? ordersSnap.val() : {};
 
     const updates = {
       [`members/${memberId}`]: null,
@@ -33,9 +38,9 @@ exports.handler = async (event) => {
       [`messages/${memberId}`]: null,
       [`emailIndex/${emailKey(member.email)}`]: null,
     };
-    if (ordersSnap.exists()) {
-      Object.keys(ordersSnap.val()).forEach((orderId) => { updates[`orders/${orderId}`] = null; });
-    }
+    Object.entries(allOrders).forEach(([orderId, order]) => {
+      if (order.memberId === memberId) updates[`orders/${orderId}`] = null;
+    });
 
     await db.ref().update(updates);
 
